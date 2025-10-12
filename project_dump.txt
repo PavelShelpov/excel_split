@@ -1,0 +1,246 @@
+=== PROJECT STRUCTURE ===
+
+./
+├── file_handler.py
+├── filter_logic.py
+├── issues.txt
+├── main.py
+├── user_requirements.feature
+
+
+=== FILE CONTENTS ===
+
+
+─── FILE: file_handler.py ───
+
+import pandas as pd
+
+def load_xlsx(file_path: str) -> pd.DataFrame:
+    """
+    Загружает XLSX-файл в pandas DataFrame.
+
+    :param file_path: Путь к XLSX-файлу.
+    :return: Загруженный DataFrame.
+    :raises: FileNotFoundError, ValueError (если файл не найден или имеет неверный формат).
+    """
+    try:
+        df = pd.read_excel(file_path, engine='openpyxl')
+        return df
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Файл не найден: {file_path}")
+    except Exception as e:
+        # pandas может выбросить разные ошибки при чтении (например, xlrd в старых версиях)
+        # Лучше уточнить тип ошибки, но для простоты - общий Exception
+        raise ValueError(f"Ошибка при чтении файла: {e}")
+
+def save_xlsx(dataframe: pd.DataFrame, output_path: str) -> None:
+    """
+    Сохраняет pandas DataFrame в XLSX-файл.
+
+    :param dataframe: DataFrame для сохранения.
+    :param output_path: Путь для сохранения XLSX-файла.
+    """
+    dataframe.to_excel(output_path, index=False, engine='openpyxl')
+
+─── FILE: filter_logic.py ───
+
+import pandas as pd
+
+def get_column_names(dataframe: pd.DataFrame) -> list[str]:
+    """
+    Возвращает список названий колонок из DataFrame.
+
+    :param dataframe: Входной DataFrame.
+    :return: Список названий колонок.
+    """
+    return list(dataframe.columns)
+
+def get_unique_values(dataframe: pd.DataFrame, column_name: str) -> list:
+    """
+    Возвращает уникальные значения (категории) в указанной колонке.
+
+    :param dataframe: Входной DataFrame.
+    :param column_name: Название колонки.
+    :return: Список уникальных значений. Включает NaN, если они есть.
+    """
+    # Используем dropna=False, чтобы NaN оставались в списке уникальных значений,
+    # если они присутствуют. Это позволяет пользователю их выбрать.
+    # Если NaN не нужны, можно использовать dataframe[column_name].dropna().unique()
+    unique_series = dataframe[column_name].unique()
+    # Конвертируем numpy array в list для удобства
+    return unique_series.tolist()
+
+def apply_filter(dataframe: pd.DataFrame, column_name: str, category_value) -> pd.DataFrame:
+    """
+    Применяет фильтр к DataFrame по указанной колонке и значению категории.
+
+    :param dataframe: Входной DataFrame.
+    :param column_name: Название колонки для фильтрации.
+    :param category_value: Значение категории для фильтрации.
+    :return: Новый, отфильтрованный DataFrame.
+    """
+    # Используем .copy() для создания независимой копии отфильтрованных данных
+    filtered_df = dataframe[dataframe[column_name] == category_value].copy()
+    return filtered_df
+
+─── FILE: issues.txt ───
+
+Затем пользователь выбирает колонку из имеющихся в таблице
+    Уникальные значения в колонке 'Unnamed: 1':
+    Traceback (most recent call last):
+    File "c:\Users\shelp\projects\excel_split\main.py", line 131, in <module>
+        main()
+        ~~~~^^
+    File "c:\Users\shelp\projects\excel_split\main.py", line 64, in main
+        display_val = "NaN" if pd.isna(val) else val
+                            ^^
+    NameError: name 'pd' is not defined. Did you mean: 'id'?
+
+─── FILE: main.py ───
+
+from file_handler import load_xlsx, save_xlsx
+from filter_logic import get_column_names, get_unique_values, apply_filter
+
+def main():
+    """
+    Основная функция приложения для фильтрации XLSX файла.
+    """
+    print("--- Приложение фильтрации XLSX файла ---")
+
+    # 1. Пользователь выбирает файл (ввод пути в консоли)
+    file_path = input("Введите путь к XLSX файлу: ").strip()
+    if not file_path:
+        print("Путь к файлу не может быть пустым.")
+        return
+
+    # 2. Загрузка файла
+    try:
+        print(f"Загрузка файла: {file_path}")
+        df = load_xlsx(file_path)
+        print(f"Файл успешно загружен. Размер: {df.shape[0]} строк, {df.shape[1]} колонок.")
+    except FileNotFoundError as fnf_error:
+        print(fnf_error)
+        return
+    except ValueError as ve:
+        print(ve)
+        return
+    except Exception as e:
+        print(f"Произошла непредвиденная ошибка при загрузке: {e}")
+        return
+
+    # 3. Пользователь выбирает колонку
+    columns = get_column_names(df)
+    print("\nДоступные колонки:")
+    for i, col in enumerate(columns):
+        print(f"{i + 1}. {col}")
+
+    while True:
+        try:
+            col_choice = input("\nВведите номер или название колонки для фильтрации: ").strip()
+            # Проверяем, является ли ввод числом и соответствует ли номер колонке
+            if col_choice.isdigit():
+                col_index = int(col_choice) - 1
+                if 0 <= col_index < len(columns):
+                    selected_column = columns[col_index]
+                    break
+                else:
+                    print("Неверный номер колонки. Пожалуйста, попробуйте снова.")
+            # Проверяем, является ли ввод названием колонки
+            elif col_choice in columns:
+                selected_column = col_choice
+                break
+            else:
+                print("Колонка с таким названием не найдена. Пожалуйста, попробуйте снова.")
+        except (ValueError, IndexError):
+            print("Неверный ввод. Пожалуйста, введите номер или название колонки.")
+
+    print(f"Выбрана колонка: '{selected_column}'")
+
+    # 4. Пользователь выбирает категорию
+    unique_values = get_unique_values(df, selected_column)
+    print(f"\nУникальные значения в колонке '{selected_column}':")
+    for i, val in enumerate(unique_values):
+        # Отображаем NaN как строку 'NaN' для ясности ввода
+        display_val = "NaN" if pd.isna(val) else val
+        print(f"{i + 1}. {display_val}")
+
+    while True:
+        try:
+            cat_choice = input(f"\nВведите номер или значение категории из '{selected_column}': ").strip()
+            # Проверяем, является ли ввод числом и соответствует ли номер значению
+            if cat_choice.isdigit():
+                val_index = int(cat_choice) - 1
+                if 0 <= val_index < len(unique_values):
+                    selected_category = unique_values[val_index]
+                    break
+                else:
+                    print("Неверный номер категории. Пожалуйста, попробуйте снова.")
+            # Проверяем, является ли ввод значением (строка или число)
+            else:
+                # Для NaN ввод должен быть 'NaN'
+                if cat_choice == "NaN":
+                    selected_category = float('nan') # или pd.NA, в зависимости от pandas
+                else:
+                    # Пытаемся найти строку/число в списке уникальных значений
+                    found = False
+                    for val in unique_values:
+                        if str(val) == cat_choice: # Сравниваем как строки
+                            selected_category = val
+                            found = True
+                            break
+                    if found:
+                        break
+                    else:
+                        print(f"Категория '{cat_choice}' не найдена. Пожалуйста, попробуйте снова.")
+
+        except (ValueError, IndexError):
+            print("Неверный ввод. Пожалуйста, введите номер или значение категории.")
+
+    # Обработка NaN: pandas не может сравнить NaN с NaN через ==, используем pd.isna для фильтрации
+    if pd.isna(selected_category):
+        print(f"Выбрана категория: 'NaN' (пустое значение)")
+    else:
+        print(f"Выбрана категория: '{selected_category}'")
+
+
+    # 5. Фильтрация файла по заданной категории
+    print("\nПрименение фильтра...")
+    # Если выбрана категория NaN, используем специальную логику
+    if pd.isna(selected_category):
+        filtered_df = df[df[selected_column].isna()].copy()
+    else:
+        filtered_df = apply_filter(df, selected_column, selected_category)
+
+    print(f"Фильтрация завершена. Найдено {filtered_df.shape[0]} строк.")
+
+    # 6. Данные, не попавшие в фильтр, "удаляются" (не сохраняются в filtered_df)
+
+    # 7. Сохранение файла
+    output_filename = input("\nВведите имя для сохраняемого файла (без расширения .xlsx): ").strip()
+    if not output_filename:
+        output_filename = "filtered_output"
+    output_path = f"{output_filename}.xlsx"
+
+    try:
+        save_xlsx(filtered_df, output_path)
+        print(f"\nФайл успешно сохранен как: {output_path}")
+    except Exception as e:
+        print(f"Ошибка при сохранении файла: {e}")
+
+if __name__ == "__main__":
+    main()
+
+─── FILE: user_requirements.feature ───
+
+# 1 итерация ->
+
+Функция: Фильтрация файла по категории
+
+    Сценарий: Фильтрация файла по одной категории
+        Дано файл xlsx
+        Когда пользователь выбирает файл
+        Затем пользователь выбирает колонку
+        Затем пользователь выбирает категорию из колонки
+        Тогда файл фильтруется по заданной категории
+        Затем данные не попавшие в фильтр удаляются
+        Затем файл сохраняется
