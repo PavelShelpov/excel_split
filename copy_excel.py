@@ -14,7 +14,6 @@ def get_all_sheets_headers(file_path, max_scan_rows=10):
             header_row = None
             header_row_idx = 0
 
-            # Поиск строки с максимальным количеством данных
             for row_idx, row in enumerate(ws.iter_rows(min_row=1, max_row=max_scan_rows), start=1):
                 non_empty_count = sum(1 for cell in row if cell.value is not None)
                 if non_empty_count > max_non_empty:
@@ -22,7 +21,6 @@ def get_all_sheets_headers(file_path, max_scan_rows=10):
                     header_row = row
                     header_row_idx = row_idx
 
-            # Сохранение результатов
             if max_non_empty > 0:
                 headers = [cell.value for cell in header_row if cell.value is not None]
                 sheet_results[ws.title] = (headers, header_row_idx)
@@ -32,6 +30,29 @@ def get_all_sheets_headers(file_path, max_scan_rows=10):
         return sheet_results
     except Exception as e:
         raise ValueError(f"Ошибка анализа Excel: {str(e)}")
+
+def analyze_column(file_path, valid_sheets, selected_column):
+    """Собирает уникальные значения из указанной колонки по всем листам."""
+    try:
+        wb = openpyxl.load_workbook(file_path)  # Полная загрузка для анализа данных
+        categories = set()
+        
+        for sheet_name, (headers, row_idx) in valid_sheets.items():
+            ws = wb[sheet_name]
+            try:
+                col_index = headers.index(selected_column)
+            except ValueError:
+                continue  # Колонка должна быть в заголовках (проверено ранее)
+            
+            # Сбор данных с row_idx+1 до конца листа
+            for row in ws.iter_rows(min_row=row_idx + 1, values_only=True):
+                cell_value = row[col_index]
+                if cell_value is not None and str(cell_value).strip() != "":
+                    categories.add(str(cell_value).strip())
+        
+        return sorted(categories)
+    except Exception as e:
+        raise ValueError(f"Ошибка анализа данных: {str(e)}")
 
 def main():
     print("=== Копирование Excel-файла ===")
@@ -62,7 +83,6 @@ def main():
         sheet_headers = get_all_sheets_headers(source)
         valid_sheets = {sheet: data for sheet, data in sheet_headers.items() if data[0] is not None}
         
-        # Проверка наличия данных
         if not valid_sheets:
             print("❌ Ошибка: Ни в одном листе не найдены заголовки")
             return
@@ -77,13 +97,27 @@ def main():
         
         # Поиск пересечения заголовков
         all_headers = [set(headers) for headers, _ in valid_sheets.values()]
-        common_headers = set.intersection(*all_headers)
+        common_headers = set.intersection(*all_headers) if all_headers else set()
         
-        # Вывод результата
         if not common_headers:
             print("\n⚠️ Не найдено общих заголовков между листами")
         else:
             print(f"\n✅ Общие заголовки во всех листах: {', '.join(common_headers)}")
+            
+            # Выбор колонки для анализа
+            print("\nДоступные колонки для анализа:", ", ".join(common_headers))
+            selected_column = input("Введите название колонки для анализа: ").strip()
+            
+            if selected_column not in common_headers:
+                print(f"❌ Ошибка: колонка '{selected_column}' не найдена в общих заголовках")
+            else:
+                categories = analyze_column(source, valid_sheets, selected_column)
+                if categories:
+                    print(f"\n📚 Категории в колонке '{selected_column}':")
+                    for i, cat in enumerate(categories, 1):
+                        print(f"  {i}. {cat}")
+                else:
+                    print(f"⚠️ В колонке '{selected_column}' нет данных")
     except Exception as e:
         print(f"❌ {str(e)}")
         return
