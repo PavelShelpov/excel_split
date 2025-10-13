@@ -52,41 +52,125 @@ def analyze_column(file_path, valid_sheets, selected_column):
     except Exception as e:
         raise ValueError(f"Error analyzing data: {str(e)}")
 
+def find_data_range(ws, header_row_idx, selected_column, category):
+    """Определяет границы данных: начало, конец и технические строки."""
+    # Начало таблицы (строка заголовков)
+    data_start = header_row_idx + 1
+    
+    # Конец данных: последняя строка с непустыми ячейками в области заголовков
+    data_end = ws.max_row
+    for row_idx in range(ws.max_row, header_row_idx, -1):
+        row_has_data = any(cell.value is not None for cell in ws[row_idx])
+        if row_has_data:
+            data_end = row_idx
+            break
+    
+    # Технические строки ниже: строки после data_end
+    return data_start, data_end
+
 def create_filtered_file(source, target, valid_sheets, selected_column, category):
-    """Создаёт новый файл с отфильтрованными данными без внешних зависимостей."""
+    """Создаёт новый файл с отфильтрованными данными и полным сохранением форматирования."""
     try:
-        wb_source = openpyxl.load_workbook(source, read_only=True)
+        wb_source = openpyxl.load_workbook(source, read_only=False)
         wb_new = openpyxl.Workbook()
-        wb_new.remove(wb_new.active)  # Удаляем дефолтный лист
+        wb_new.remove(wb_new.active)
         
         for sheet_name in wb_source.sheetnames:
             ws_source = wb_source[sheet_name]
             ws_new = wb_new.create_sheet(title=sheet_name)
             
+            # Копирование ширины столбцов
+            for col_letter, dim in ws_source.column_dimensions.items():
+                ws_new.column_dimensions[col_letter].width = dim.width
+            
+            # Копирование высоты строк
+            for row_idx, dim in ws_source.row_dimensions.items():
+                ws_new.row_dimensions[row_idx].height = dim.height
+            
+            # Копирование объединенных ячеек
+            for merged_cell in ws_source.merged_cells.ranges:
+                ws_new.merge_cells(str(merged_cell))
+            
             # Обработка листов с заголовками
             if sheet_name in valid_sheets:
-                headers, row_idx = valid_sheets[sheet_name]
+                headers, header_row_idx = valid_sheets[sheet_name]
                 try:
                     col_index = headers.index(selected_column)
                 except ValueError:
-                    # Копируем все строки без фильтрации
-                    for row in ws_source.iter_rows(values_only=True):
-                        ws_new.append(row)
-                    continue
+                    col_index = None
                 
-                # Копируем заголовки
-                header_row = list(ws_source.iter_rows(min_row=row_idx, max_row=row_idx, values_only=True))[0]
-                ws_new.append(header_row)
+                # Определение границ данных
+                data_start, data_end = find_data_range(ws_source, header_row_idx, selected_column, category)
                 
-                # Фильтрация данных
-                for row in ws_source.iter_rows(min_row=row_idx + 1, values_only=True):
-                    cell_value = row[col_index] if col_index < len(row) else None
+                # 1. Копирование технических строк выше таблицы (до заголовков)
+                for row_idx in range(1, header_row_idx):
+                    for col_idx in range(1, ws_source.max_column + 1):
+                        cell = ws_source.cell(row=row_idx, column=col_idx)
+                        if cell.value is not None or cell.has_style:
+                            new_cell = ws_new.cell(row=row_idx, column=col_idx, value=cell.value)
+                            if cell.has_style:
+                                new_cell.style = cell.style
+                                new_cell.font = cell.font.copy()
+                                new_cell.border = cell.border.copy()
+                                new_cell.fill = cell.fill.copy()
+                                new_cell.alignment = cell.alignment.copy()
+                
+                # 2. Копирование заголовков
+                for col_idx in range(1, ws_source.max_column + 1):
+                    cell = ws_source.cell(row=header_row_idx, column=col_idx)
+                    if cell.value is not None or cell.has_style:
+                        new_cell = ws_new.cell(row=header_row_idx, column=col_idx, value=cell.value)
+                        if cell.has_style:
+                            new_cell.style = cell.style
+                            new_cell.font = cell.font.copy()
+                            new_cell.border = cell.border.copy()
+                            new_cell.fill = cell.fill.copy()
+                            new_cell.alignment = cell.alignment.copy()
+                
+                # 3. Фильтрация данных
+                new_row_idx = header_row_idx + 1
+                for row_idx in range(data_start, data_end + 1):
+                    cell = ws_source.cell(row=row_idx, column=col_index + 1)
+                    cell_value = cell.value if cell.value is not None else ""
+                    
                     if str(cell_value).strip() == str(category).strip():
-                        ws_new.append(row)
+                        for col_idx in range(1, ws_source.max_column + 1):
+                            source_cell = ws_source.cell(row=row_idx, column=col_idx)
+                            if source_cell.value is not None or source_cell.has_style:
+                                new_cell = ws_new.cell(row=new_row_idx, column=col_idx, value=source_cell.value)
+                                if source_cell.has_style:
+                                    new_cell.style = source_cell.style
+                                    new_cell.font = source_cell.font.copy()
+                                    new_cell.border = source_cell.border.copy()
+                                    new_cell.fill = source_cell.fill.copy()
+                                    new_cell.alignment = source_cell.alignment.copy()
+                        new_row_idx += 1
+                
+                # 4. Копирование технических строк ниже таблицы
+                for row_idx in range(data_end + 1, ws_source.max_row + 1):
+                    for col_idx in range(1, ws_source.max_column + 1):
+                        cell = ws_source.cell(row=row_idx, column=col_idx)
+                        if cell.value is not None or cell.has_style:
+                            new_cell = ws_new.cell(row=row_idx, column=col_idx, value=cell.value)
+                            if cell.has_style:
+                                new_cell.style = cell.style
+                                new_cell.font = cell.font.copy()
+                                new_cell.border = cell.border.copy()
+                                new_cell.fill = cell.fill.copy()
+                                new_cell.alignment = cell.alignment.copy()
             else:
-                # Копируем лист без изменений
-                for row in ws_source.iter_rows(values_only=True):
-                    ws_new.append(row)
+                # Копирование листа без изменений (без заголовков)
+                for row_idx in range(1, ws_source.max_row + 1):
+                    for col_idx in range(1, ws_source.max_column + 1):
+                        cell = ws_source.cell(row=row_idx, column=col_idx)
+                        if cell.value is not None or cell.has_style:
+                            new_cell = ws_new.cell(row=row_idx, column=col_idx, value=cell.value)
+                            if cell.has_style:
+                                new_cell.style = cell.style
+                                new_cell.font = cell.font.copy()
+                                new_cell.border = cell.border.copy()
+                                new_cell.fill = cell.fill.copy()
+                                new_cell.alignment = cell.alignment.copy()
         
         wb_new.save(target)
         return target
@@ -162,8 +246,6 @@ def main():
                         # Создание отфильтрованного файла
                         os.makedirs(destination, exist_ok=True)
                         target_file = os.path.join(destination, os.path.basename(source))
-                        
-                        # Удаляем расширение и добавляем .xlsx (гарантированно чистый файл)
                         if target_file.lower().endswith(('.xlsx', '.xlsm', '.xlsb')):
                             target_file = os.path.splitext(target_file)[0] + ".xlsx"
                         else:
@@ -184,7 +266,6 @@ def main():
     else:
         target_file += ".xlsx"
     
-    # Создаём пустой файл (без данных, только структура)
     wb = openpyxl.Workbook()
     wb.save(target_file)
     print(f"\nEmpty file created at: {target_file}")
