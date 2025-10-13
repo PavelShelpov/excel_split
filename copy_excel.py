@@ -1,6 +1,7 @@
 # copy_excel.py
 import os
 import openpyxl
+from copy import copy
 
 def get_all_sheets_headers(file_path, max_scan_rows=10):
     """Анализирует все листы в Excel-файле, возвращает заголовки для каждого."""
@@ -110,10 +111,11 @@ def create_filtered_file(source, target, valid_sheets, selected_column, category
                             new_cell = ws_new.cell(row=row_idx, column=col_idx, value=cell.value)
                             if cell.has_style:
                                 new_cell.style = cell.style
-                                new_cell.font = cell.font.copy()
-                                new_cell.border = cell.border.copy()
-                                new_cell.fill = cell.fill.copy()
-                                new_cell.alignment = cell.alignment.copy()
+                                new_cell.font = copy(cell.font)
+                                new_cell.border = copy(cell.border)
+                                new_cell.fill = copy(cell.fill)
+                                new_cell.alignment = copy(cell.alignment)
+                                new_cell.number_format = cell.number_format  # Сохранение числового формата
                 
                 # 2. Копирование заголовков
                 for col_idx in range(1, ws_source.max_column + 1):
@@ -122,10 +124,11 @@ def create_filtered_file(source, target, valid_sheets, selected_column, category
                         new_cell = ws_new.cell(row=header_row_idx, column=col_idx, value=cell.value)
                         if cell.has_style:
                             new_cell.style = cell.style
-                            new_cell.font = cell.font.copy()
-                            new_cell.border = cell.border.copy()
-                            new_cell.fill = cell.fill.copy()
-                            new_cell.alignment = cell.alignment.copy()
+                            new_cell.font = copy(cell.font)
+                            new_cell.border = copy(cell.border)
+                            new_cell.fill = copy(cell.fill)
+                            new_cell.alignment = copy(cell.alignment)
+                            new_cell.number_format = cell.number_format
                 
                 # 3. Фильтрация данных
                 new_row_idx = header_row_idx + 1
@@ -140,10 +143,11 @@ def create_filtered_file(source, target, valid_sheets, selected_column, category
                                 new_cell = ws_new.cell(row=new_row_idx, column=col_idx, value=source_cell.value)
                                 if source_cell.has_style:
                                     new_cell.style = source_cell.style
-                                    new_cell.font = source_cell.font.copy()
-                                    new_cell.border = source_cell.border.copy()
-                                    new_cell.fill = source_cell.fill.copy()
-                                    new_cell.alignment = source_cell.alignment.copy()
+                                    new_cell.font = copy(source_cell.font)
+                                    new_cell.border = copy(source_cell.border)
+                                    new_cell.fill = copy(source_cell.fill)
+                                    new_cell.alignment = copy(source_cell.alignment)
+                                    new_cell.number_format = source_cell.number_format  # Сохранение числового формата
                         new_row_idx += 1
                 
                 # 4. Копирование технических строк ниже таблицы
@@ -154,10 +158,11 @@ def create_filtered_file(source, target, valid_sheets, selected_column, category
                             new_cell = ws_new.cell(row=row_idx, column=col_idx, value=cell.value)
                             if cell.has_style:
                                 new_cell.style = cell.style
-                                new_cell.font = cell.font.copy()
-                                new_cell.border = cell.border.copy()
-                                new_cell.fill = cell.fill.copy()
-                                new_cell.alignment = cell.alignment.copy()
+                                new_cell.font = copy(cell.font)
+                                new_cell.border = copy(cell.border)
+                                new_cell.fill = copy(cell.fill)
+                                new_cell.alignment = copy(cell.alignment)
+                                new_cell.number_format = cell.number_format
             else:
                 # Копирование листа без изменений (без заголовков)
                 for row_idx in range(1, ws_source.max_row + 1):
@@ -167,10 +172,11 @@ def create_filtered_file(source, target, valid_sheets, selected_column, category
                             new_cell = ws_new.cell(row=row_idx, column=col_idx, value=cell.value)
                             if cell.has_style:
                                 new_cell.style = cell.style
-                                new_cell.font = cell.font.copy()
-                                new_cell.border = cell.border.copy()
-                                new_cell.fill = cell.fill.copy()
-                                new_cell.alignment = cell.alignment.copy()
+                                new_cell.font = copy(cell.font)
+                                new_cell.border = copy(cell.border)
+                                new_cell.fill = copy(cell.fill)
+                                new_cell.alignment = copy(cell.alignment)
+                                new_cell.number_format = cell.number_format
         
         wb_new.save(target)
         return target
