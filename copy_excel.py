@@ -165,7 +165,6 @@ def create_filtered_file(source, target, valid_sheets, filters):
                             # Пытаемся создать новое условное форматирование с сохранением свойств
                             try:
                                 new_cf = type(cf)()
-                                
                                 # Копируем основные свойства
                                 for attr in ['type', 'operator', 'formula', 'dxf', 'pivot', 'stopIfTrue', 'priority']:
                                     if hasattr(cf, attr):
@@ -186,18 +185,8 @@ def create_filtered_file(source, target, valid_sheets, filters):
                                         new_cf.dataBar.color = copy(cf.dataBar.color)
                                 
                                 ws_new.conditional_formatting.add(cf._range, new_cf)
-                            except Exception as e:
-                                # Пытаемся скопировать минимально необходимые атрибуты
-                                try:
-                                    new_cf = openpyxl.formatting.rule.Rule(
-                                        type=cf.type,
-                                        dxf=cf.dxf,
-                                        operator=cf.operator,
-                                        formula=cf.formula
-                                    )
-                                    ws_new.conditional_formatting.add(cf._range, new_cf)
-                                except:
-                                    pass
+                            except:
+                                pass
                 
                 if sheet_name in valid_sheets:
                     headers, header_row_idx = valid_sheets[sheet_name]
@@ -332,14 +321,25 @@ def get_all_combinations(source, valid_sheets, hierarchy_columns, filters=None, 
 def select_categories_sequentially(source, valid_sheets, hierarchy_columns):
     """Последовательно запрашивает выбор категорий у пользователя с отображением вариантов для каждой комбинации."""
     all_combinations = []
+    analysis_cache = {}  # Кэш для анализа
     
-    def generate_combinations(level, current_filters, include_all=False):
+    def get_category_values(column, current_filters):
+        """Получает доступные категории для заданного фильтра"""
+        cache_key = (column, tuple(sorted(current_filters.items())))
+        if cache_key in analysis_cache:
+            return analysis_cache[cache_key]
+        
+        categories = analyze_column(source, valid_sheets, column, current_filters)
+        analysis_cache[cache_key] = categories
+        return categories
+    
+    def generate_combinations(level, current_filters):
         if level >= len(hierarchy_columns):
             all_combinations.append(current_filters.copy())
             return
         
         column = hierarchy_columns[level]
-        categories = analyze_column(source, valid_sheets, column, current_filters)
+        categories = get_category_values(column, current_filters)
         
         if not categories:
             return
@@ -363,7 +363,7 @@ def select_categories_sequentially(source, valid_sheets, hierarchy_columns):
                         for category in categories:
                             new_filters = current_filters.copy()
                             new_filters[column] = category
-                            generate_combinations(level + 1, new_filters, True)
+                            generate_combinations(level + 1, new_filters)
                         return
                     elif all_comb == 'n':
                         break
@@ -423,11 +423,8 @@ def select_categories_sequentially(source, valid_sheets, hierarchy_columns):
             new_filters = current_filters.copy()
             new_filters[column] = category
             
-            # Если пользователь выбрал "all" для предыдущего уровня
-            if include_all and level > 0:
-                generate_combinations(level + 1, new_filters, True)
-            else:
-                generate_combinations(level + 1, new_filters)
+            # Генерируем следующий уровень
+            generate_combinations(level + 1, new_filters)
     
     # Начинаем генерацию комбинаций с первого уровня
     generate_combinations(0, {})
