@@ -165,25 +165,12 @@ def create_filtered_file(source, target, valid_sheets, filters):
                             # Пытаемся создать новое условное форматирование с сохранением свойств
                             try:
                                 new_cf = type(cf)()
-                                # Копируем основные свойства
-                                for attr in ['type', 'operator', 'formula', 'dxf', 'pivot', 'stopIfTrue', 'priority']:
-                                    if hasattr(cf, attr):
-                                        setattr(new_cf, attr, getattr(cf, attr))
-                                
-                                # Копируем цвета для правил с цветами
-                                if hasattr(cf, 'colorScale'):
-                                    if hasattr(cf.colorScale, 'cfvo'):
-                                        new_cf.colorScale.cfvo = [copy(cfvo) for cfvo in cf.colorScale.cfvo]
-                                    if hasattr(cf.colorScale, 'color'):
-                                        new_cf.colorScale.color = [copy(color) for color in cf.colorScale.color]
-                                
-                                # Копируем данные для правил с данными
-                                if hasattr(cf, 'dataBar'):
-                                    if hasattr(cf.dataBar, 'cfvo'):
-                                        new_cf.dataBar.cfvo = [copy(cfvo) for cfvo in cf.dataBar.cfvo]
-                                    if hasattr(cf.dataBar, 'color'):
-                                        new_cf.dataBar.color = copy(cf.dataBar.color)
-                                
+                                for attr in dir(cf):
+                                    if not attr.startswith('_') and not callable(getattr(cf, attr)):
+                                        try:
+                                            setattr(new_cf, attr, getattr(cf, attr))
+                                        except:
+                                            pass
                                 ws_new.conditional_formatting.add(cf._range, new_cf)
                             except:
                                 pass
@@ -321,25 +308,14 @@ def get_all_combinations(source, valid_sheets, hierarchy_columns, filters=None, 
 def select_categories_sequentially(source, valid_sheets, hierarchy_columns):
     """Последовательно запрашивает выбор категорий у пользователя с отображением вариантов для каждой комбинации."""
     all_combinations = []
-    analysis_cache = {}  # Кэш для анализа
     
-    def get_category_values(column, current_filters):
-        """Получает доступные категории для заданного фильтра"""
-        cache_key = (column, tuple(sorted(current_filters.items())))
-        if cache_key in analysis_cache:
-            return analysis_cache[cache_key]
-        
-        categories = analyze_column(source, valid_sheets, column, current_filters)
-        analysis_cache[cache_key] = categories
-        return categories
-    
-    def generate_combinations(level, current_filters):
+    def generate_combinations(level, current_filters, include_all=False):
         if level >= len(hierarchy_columns):
             all_combinations.append(current_filters.copy())
             return
         
         column = hierarchy_columns[level]
-        categories = get_category_values(column, current_filters)
+        categories = analyze_column(source, valid_sheets, column, current_filters)
         
         if not categories:
             return
@@ -363,7 +339,7 @@ def select_categories_sequentially(source, valid_sheets, hierarchy_columns):
                         for category in categories:
                             new_filters = current_filters.copy()
                             new_filters[column] = category
-                            generate_combinations(level + 1, new_filters)
+                            generate_combinations(level + 1, new_filters, True)
                         return
                     elif all_comb == 'n':
                         break
@@ -423,8 +399,11 @@ def select_categories_sequentially(source, valid_sheets, hierarchy_columns):
             new_filters = current_filters.copy()
             new_filters[column] = category
             
-            # Генерируем следующий уровень
-            generate_combinations(level + 1, new_filters)
+            # Если пользователь выбрал "all" для предыдущего уровня
+            if include_all and level > 0:
+                generate_combinations(level + 1, new_filters, True)
+            else:
+                generate_combinations(level + 1, new_filters)
     
     # Начинаем генерацию комбинаций с первого уровня
     generate_combinations(0, {})
