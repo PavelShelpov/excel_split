@@ -1,0 +1,927 @@
+=== PROJECT STRUCTURE ===
+
+./
+├── config.py
+├── iteration_log.txt
+├── main.py
+├── main_context.txt
+├── cli/
+│   ├── init.py
+│   ├── interface.py
+├── core/
+│   ├── init.py
+│   ├── processing.py
+├── excel_utils/
+│   ├── analysis.py
+│   ├── filtering.py
+│   ├── formatting.py
+│   ├── init.py
+│   ├── workbook.py
+├── gui/
+│   ├── init.py
+│   ├── placeholder.py
+
+
+=== FILE CONTENTS ===
+
+
+─── FILE: config.py ───
+
+# Конфигурация проекта
+# Будет расширена в будущих итерациях
+
+MAX_SCAN_ROWS = 10
+DEFAULT_FILE_EXTENSION = '.xlsx'
+
+─── FILE: iteration_log.txt ───
+
+Итерация #43
+    Ключевые изменения:
+        Внедрена модульная структура проекта: разделение на логические модули (excel_utils, cli, core, gui)
+        Создана основа для расширения: добавлены заготовки для будущего GUI
+        Улучшена поддерживаемость: добавлены типизированные аннотации, оптимизированы импорты
+    Проблемы:
+        Требуется добавление системы логирования для отслеживания операций
+        Нужно внедрить unit-тесты для критически важных функций
+		Работоспособность нарушена:
+			Traceback (most recent call last):
+				File "c:\Users\Pavel.Shelpov2\projects\excel_split\main.py", line 2, in <module>
+					from cli.interface import main as cli_main
+				File "c:\Users\Pavel.Shelpov2\projects\excel_split\cli\interface.py", line 1, in <module>
+					from core.processing import process_file
+				File "c:\Users\Pavel.Shelpov2\projects\excel_split\core\processing.py", line 3, in <module>
+					from excel_utils import (
+					...<7 lines>...
+					)
+			ImportError: cannot import name 'get_all_sheets_headers' from 'excel_utils' (unknown location)
+
+Итерация #42
+	Ключевые изменения:
+		Убрана поддержка .xlsm, все файлы сохраняются как .xlsx.
+		Исправлено копирование условного форматирования для всех типов правил.
+		Упрощена логика сохранения файлов.
+	Проблемы:
+		Нет возможности вернуться и выбрать другой файл после его выбора, только через ctrl+c
+		Многоуровневая фильтрация не дает возможности выбрать все уровни разом, а только точечно
+
+Итерация #41
+	Ключевые изменения:
+		Добавлена опция выбора всех комбинаций с подтверждением.
+		Исправлено копирование условного форматирования для .xlsm файлов.
+		Ограничена область автофильтра только строкой заголовков.
+	Проблемы:
+		Условное форматирование не переносится
+
+Итерация #40
+	Ключевые изменения:
+		Полностью переработана логика выбора категорий с использованием рекурсии для правильного отображения вариантов.
+		Исправлено сохранение .xlsm файлов с макросами.
+		Добавлена обработка частичных уровней фильтрации
+	Проблемы:
+		В результаты xlsm не переносится условное форматирование
+		Кнопки фильтров растягиваются дальше заголовков по строке
+
+Итерация #39
+	Изменено:
+		Полностью переработана логика генерации комбинаций фильтров для множественного выбора.
+		Исправлено сохранение .xlsm файлов с макросами.
+		Добавлена обработка частичных уровней фильтрации.
+	Проблемы:
+		Проблема с комбинациями категорий не исправлена
+		Error: Error during filtering: Workbook.__init__() got an unexpected keyword argument 'keep_vba'
+
+Итерация #38
+	Изменено:
+		Убран недопустимый параметр keep_vba при создании нового файла.
+		Переработана логика выбора категорий для отображения вариантов для каждой комбинации.
+		Исправлено зацикливание при выборе последней колонки.
+	Выявленные проблемы:
+		Проблема с комбинациями категорий не исправлена:
+			Выбираются две колонки, в первой выбираются две категории, для второй выбираются all, ожидается, что для каждой из первых двух категорий будут подобраны все комбинации из второй, чего не проиходит
+
+Итерация #37
+	Изменено:
+		Удален недопустимый параметр keep_vba при создании нового файла.
+		Добавлена корректная обработка макросов для .xlsm файлов через параметр при загрузке.
+		Улучшена логика сохранения макросов при работе с .xlsm файлами.
+	Выявленные проблемы:
+		Не решено: Error: Error during filtering: Workbook.__init__() got an unexpected keyword argument 'keep_vba' после выбора последней категории в любых файлах
+		Выбор категорий уровнями ниже осуществляется некорректно, ищет только пересечения с уровнями выше, а нужно учитывать все комбинации.
+
+Итерация #36
+	Изменено:
+		Добавлена проверка видимости листов при анализе.
+		Исправлена ошибка с keep_vba для .xlsx файлов.
+		Улучшена обработка скрытых листов на всех этапах.
+	Выявленные проблемы:
+		Error: Error during filtering: Workbook.__init__() got an unexpected keyword argument 'keep_vba' после выбора последней категории в любых файлах
+
+Итерация #35
+	Добавлена проверка наличия данных на листе перед добавлением в результирующий файл.
+	Добавлен автофильтр в строку заголовков результирующих файлов.
+	Добавлена поддержка .xlsm файлов с сохранением макросов.
+
+Итерация #34
+	Исправлена обработка ключевого слова "all" в выборе категорий
+	Улучшена логика генерации комбинаций для множественного выбора
+	Создаются файлы для всех выбранных комбинаций, включая частичные уровни
+
+Итерация #33
+	Создана отдельная функция process_file() для обработки одного файла
+	Упрощен главный цикл программы
+	Исправлено зацикливание при выборе последней колонки
+	Добавлена обработка ошибок на каждом этапе
+
+Итерация #32
+	Удален запрос подтверждения после успешного выполнения
+	Программа автоматически возвращается к выбору файла после успешной обработки
+	Улучшена обработка ошибок для бесшовного перехода к следующей итерации
+
+Итерация #31
+	Добавлено отображение колонок в нумерованном списке
+	Улучшена обработка ошибок ввода с возвратом к предыдущему шагу
+	Добавлена возможность отмены шага и исправления предыдущего ввода
+	Исправлена ошибка UnboundLocalError при прерывании через Ctrl+C
+	Улучшена логика создания файлов для всех уровней комбинаций
+
+Итерация #30
+	Разделение на два режима: анализ данных в read-only, создание файлов в полном режиме
+	Добавлены проверки на наличие атрибутов column_dimensions и row_dimensions
+	Улучшена обработка исключений для предотвращения повреждения оригинального файла
+
+Итерация #29
+	Восстановлен режим read_only=False с безопасным управлением ресурсами
+	Добавлены контекстные менеджеры для гарантированного закрытия файлов
+	Улучшена обработка исключений для предотвращения повреждения оригинального файла
+
+Итерация #28
+	Последовательный выбор категорий: пользователь последовательно выбирает категории для каждой колонки
+	Динамический анализ доступных категорий: на каждом этапе отображаются только доступные варианты
+	Оптимизация производительности: кэширование промежуточных результатов
+
+Итерация #27
+	Восстановлена оригинальная фильтрация для одного уровня
+	Иерархическая обработка выделена в отдельную функцию
+	Добавлена возможность отмены операции через Ctrl+C
+
+Итерация #26
+	Переключение на read_only=True для загрузки исходного файла
+	Добавлена явная проверка на существование целевого файла перед сохранением
+	Улучшена обработка исключений для гарантированного закрытия файлов
+
+Итерация #25
+	Восстановлено полное копирование стилей (цвета, шрифты, границы)
+	Сохранение ширины столбцов и высоты строк
+	Исправлено копирование объединенных ячеек
+
+Итерация #24
+	Последовательная обработка уровней сверху вниз
+	Итеративный подход вместо рекурсии
+	Проверка данных перед созданием файлов
+
+Итерация #23
+	Упрощенная логика фильтрации при выборе одной колонки
+	Добавлена опция выбора нескольких категорий
+	Генерация имен файлов с префиксами уровней
+
+Итерация #22
+	Восстановлено полное копирование стилей (цвета, шрифты, границы)
+	Сохранение ширины столбцов и высоты строк
+	Исправлено копирование объединенных ячеек
+
+Итерация #21
+	Устранена проблема с техническими строками ниже таблицы
+	Оптимизирована производительность за счет упрощения копирования стилей
+	Восстановлена базовая фильтрация для одной колонки
+
+Итерация #20
+	Восстановлена оригинальная фильтрация для одного уровня
+	Иерархическая обработка выделена в отдельную функцию
+	Добавлена возможность отмены операции через Ctrl+C
+
+Итерация #19
+	Последовательная обработка уровней сверху вниз
+	Итеративный подход вместо рекурсии
+	Проверка данных перед созданием файлов
+
+Итерация #18
+	Поддержка выбора нескольких колонок через запятую
+	Создание файлов для каждого уровня иерархии
+	Формирование имен файлов с префиксами всех предыдущих уровней
+
+Итерация #17
+	Добавлена поддержка множественного выбора категорий через запятую и ключевое слово "all"
+	Генерация имен файлов с суффиксом категории и защитой от недопустимых символов
+	Циклическая обработка каждой категории с созданием отдельных файлов
+
+Итерация #16
+	Устранены предупреждения через импорт copy и замену .copy()
+	Сохранение числовых форматов (даты, валюта) через number_format
+	Полная совместимость с openpyxl без предупреждений
+
+Итерация #15
+	Полное сохранение форматирования: стили, объединения, ширина/высота
+	Сохранение технических строк выше и ниже таблицы
+	Создание нового файла "с нуля" без внешних зависимостей
+
+Итерация #14
+	Создание чистого файла без внешних зависимостей через Workbook()
+	Копирование только значений ячеек (без форматирования)
+	Гарантированная совместимость с Excel
+
+Итерация #13
+	Условное удаление временного файла только при изменении расширения
+	Обработка регистра в путях через os.path.normcase
+	Удаление временного файла при ошибке
+
+Итерация #12
+	Удаление внешних зависимостей (Power Query) через загрузку без keep_vba/keep_links
+	Принудительное сохранение как .xlsx
+	Упрощенная логика без проверки VBA
+
+Итерация #11
+	Безопасная проверка VBA-кода через hasattr()
+	Резервное определение формата по расширению исходника
+	Совместимость с любыми версиями openpyxl
+
+Итерация #10
+	Динамическое определение формата сохранения (xlsx/xlsm)
+	Удаление временного битого файла после сохранения
+	Сохранение структуры книги при наличии макросов
+
+Итерация #9
+	Сначала копирование, затем фильтрация скопированного файла
+	Безопасное удаление строк снизу вверх для сохранения индексов
+	Удаление эмодзи, текстовые сообщения
+
+Итерация #8
+	Фильтрация данных в скопированном файле
+	Удаление строк снизу вверх для сохранения индексов
+	Сохранение форматирования и структуры книги
+
+Итерация #7
+	Добавлен выбор колонки для анализа
+	Сбор уникальных значений (категорий) по всем листам
+	Вывод отсортированных категорий с нумерацией
+
+Итерация #6
+	Анализ всех листов в книге
+	Поиск пересечения заголовков между листами
+	Вывод информации по каждому листу и общих колонок
+
+Итерация #5
+	Эвристический поиск заголовков в первых 10 строках
+	Определение строки с максимальным количеством данных
+	Вывод номера строки с заголовками
+
+Итерация #4
+	Добавлена обработка Excel через openpyxl
+	Проверка расширения файла (.xlsx)
+	Чтение заголовков из первой строки
+
+Итерация #3
+	Переход с CLI-аргументов на интерактивный ввод
+	Исправление обработки путей с пробелами
+	Добавлены подсказки для пользователя
+
+Итерация #2
+	Удален Flask, переход на CLI-скрипт
+	Простой интерфейс через аргументы командной строки
+	Упрощенная структура без веб-сервера
+
+Итерация #1
+	Добавлен эндпоинт /copy для копирования файлов
+	Проверка существования исходного файла
+	Автоматическое создание целевой директории
+
+Итерация #0
+	Инициализация проекта
+	Отказ от слоев из-за простоты задачи
+
+─── FILE: main.py ───
+
+import sys
+from cli.interface import main as cli_main
+
+def run():
+    """Точка входа в приложение. Может быть расширена для поддержки GUI в будущем"""
+    cli_main()
+
+if __name__ == "__main__":
+    run()
+
+─── FILE: main_context.txt ───
+
+Оптимизация и дальнейшая разработка приложения
+    Выступи в роли команды по разработке программного обеспечения
+    Приложение становится сложным в поддержке, необходимо рассмотреть архитектурные оптимизационные изменения
+    Пока приложение остается простым для командной строки, но в дальнейшем планируется расширение:
+        Добавление графического интерфейса
+        Манипуляции с браузером для сохранения полученных итогов
+    На текущем этапе не вносим дополнительных функций, просто предусматриваем архитектуру под масштабирование и сохраняем работоспособность
+    Рассуждай последовательно по ролям в рамках команды
+    Конкретные роли можешь определять самостоятельно, исходя из задач на каждой из итераций, а также текущих масштабов проекта
+    На выходе каждой итерации я должен получать готовый к запуску код с краткими пояснениями по принятым решениям с влиянием каждой из ролей.
+    Для каждой итерации необходимо вести лог итераций: ключевые изменения, что добавлено, какие проблемы были решены
+    Итерироваться будем по шагам, начиная с самых простых, по пути к расширению функционала и исправлению ошибок
+    Твоя задача на каждой итерации предлагать наиболее простые для текущей задачи решения
+    Если становится понятно, что устойчивость, масштабируемость или поддерживаемость проекта существенно осложняются, то, руководствуясь лучшими практиками можно пересматривать архитекруту и структуру проекта.
+    ВАЖНО! Интеграция каждого нового решения в проект должна проверяться каждой из ролей
+    ВАЖНО! Сохранять уже работающую бизнес-логику. Все что работает, должно остаться работоспособным
+
+─── FILE: cli\init.py ───
+
+# Импорты для пакета cli
+from .interface import main
+
+__all__ = ['main']
+
+─── FILE: cli\interface.py ───
+
+from core.processing import process_file
+
+def main():
+    """Главный цикл программы: обработка файлов."""
+    while True:
+        success = process_file()
+        # Спрашиваем, хочет ли пользователь продолжить
+        if success:
+            cont = input("\nDo you want to process another file? (y/n): ").strip().lower()
+            if cont != 'y':
+                print("Program terminated by user")
+                break
+        else:
+            cont = input("\nDo you want to try again? (y/n): ").strip().lower()
+            if cont != 'y':
+                print("Program terminated by user")
+                break
+
+─── FILE: core\init.py ───
+
+# Импорты для пакета core
+from .processing import process_file
+
+__all__ = ['process_file']
+
+─── FILE: core\processing.py ───
+
+import os
+import sys
+from excel_utils import (
+    get_all_sheets_headers,
+    analyze_column,
+    validate_row,
+    get_all_combinations,
+    select_categories_sequentially,
+    sanitize_filename,
+    create_filtered_file
+)
+
+def process_file():
+    """Обрабатывает один файл: выбор файла, директории, колонок, категорий, создание файлов."""
+    print("\n=== Copy Excel File ===")
+    print("To cancel the operation, press Ctrl+C at any time")
+    try:
+        # Шаг 0: Выбор исходного файла
+        while True:
+            source = input("\nEnter full path to source Excel file: ").strip('"')
+            if source.lower() == "cancel":
+                print("Operation cancelled by user")
+                return False
+            if os.path.exists(source) and os.path.isfile(source):
+                # Проверка формата файла
+                if not (source.lower().endswith('.xlsx') or source.lower().endswith('.xlsm')):
+                    print("Error: File must have .xlsx or .xlsm extension")
+                    continue
+                break
+            print(f"Error: Source file not found or is not a file: {source}")
+        # Шаг 1: Выбор целевой директории
+        while True:
+            destination = input("Enter target directory path: ").strip('"')
+            if destination.lower() == "cancel":
+                print("Operation cancelled by user")
+                return False
+            if os.path.isdir(destination):
+                break
+            print(f"Error: Target directory does not exist: {destination}")
+        # Анализ Excel: заголовки во всех листах
+        sheet_headers = get_all_sheets_headers(source)
+        valid_sheets = {sheet: data for sheet, data in sheet_headers.items() if data[0] is not None}
+        if not valid_sheets:
+            print("Error: No headers found in any sheet")
+            return False
+        # Поиск пересечения заголовков
+        all_headers = [set(headers) for headers, _ in valid_sheets.values()]
+        common_headers = set.intersection(*all_headers) if all_headers else set()
+        if not common_headers:
+            print("\nWarning: No common headers found between sheets")
+            return False
+        # Шаг 2: Выбор колонок для фильтрации
+        print("\nAvailable columns for filtering:")
+        common_headers_list = list(common_headers)
+        for i, col in enumerate(common_headers_list, 1):
+            print(f"  {i}. {col}")
+        print("  b. Назад")
+        print("  c. Отмена")
+        while True:
+            columns_input = input("Enter columns for filtering (comma-separated numbers or names): ").strip()
+            if columns_input.lower() in ["c", "cancel", "отмена"]:
+                print("Operation cancelled by user")
+                return False
+            if columns_input.lower() in ["b", "back", "назад"]:
+                return False  # Возврат к началу
+            # Обработка номеров колонок
+            hierarchy_columns = []
+            invalid_inputs = []
+            for item in columns_input.split(","):
+                item = item.strip()
+                if item.isdigit():
+                    idx = int(item) - 1
+                    if 0 <= idx < len(common_headers_list):
+                        hierarchy_columns.append(common_headers_list[idx])
+                    else:
+                        invalid_inputs.append(item)
+                else:
+                    hierarchy_columns.append(item)
+            # Проверка валидности
+            invalid_columns = [col for col in hierarchy_columns if col not in common_headers]
+            if invalid_columns or invalid_inputs:
+                invalid_list = invalid_columns + invalid_inputs
+                print(f"Error: Invalid columns: {', '.join(invalid_list)}")
+                continue
+            if not hierarchy_columns:
+                print("Error: No valid columns selected")
+                continue
+            break
+        # Шаг 3: Последовательный выбор категорий
+        print("\nStarting sequential category selection...")
+        all_combinations = select_categories_sequentially(source, valid_sheets, hierarchy_columns)
+        if not all_combinations:
+            print("No combinations selected")
+            return False
+        # Создание файлов
+        os.makedirs(destination, exist_ok=True)
+        base_name = os.path.splitext(os.path.basename(source))[0]
+        created_files = []
+        for filters in all_combinations:
+            # Формируем имя файла с расширением .xlsx
+            safe_parts = [sanitize_filename(v) for v in filters.values()]
+            suffix = "_".join(safe_parts) if safe_parts else "All"
+            target_file = os.path.join(destination, f"{base_name}_{suffix}.xlsx")
+            # Создаем файл
+            created_file = create_filtered_file(source, target_file, valid_sheets, filters)
+            if created_file is not None:
+                created_files.append(created_file)
+        # Вывод результатов
+        if created_files:
+            print(f"\nCreated {len(created_files)} files:")
+            for file in created_files:
+                print(f"  - {file}")
+        else:
+            print("Warning: No files created (no data matched the filters)")
+        return True
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user (Ctrl+C)")
+        return False
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return False
+
+─── FILE: excel_utils\analysis.py ───
+
+from contextlib import contextmanager
+import openpyxl
+from filtering import validate_row
+
+@contextmanager
+def safe_workbook(file_path, read_only=False):
+    """Контекстный менеджер для безопасной работы с файлами Excel."""
+    wb = None
+    try:
+        wb = openpyxl.load_workbook(file_path, read_only=read_only)
+        yield wb
+    finally:
+        if wb:
+            try:
+                wb.close()
+            except:
+                pass
+
+def get_all_sheets_headers(file_path, max_scan_rows=10):
+    """Анализирует все ВИДИМЫЕ листы в Excel-файле, возвращает заголовки для каждого."""
+    try:
+        with safe_workbook(file_path, read_only=True) as wb:
+            sheet_results = {}
+            for ws in wb.worksheets:
+                # Игнорируем скрытые листы
+                if ws.sheet_state != 'visible':
+                    continue
+                max_non_empty = 0
+                header_row = None
+                header_row_idx = 0
+                for row_idx, row in enumerate(ws.iter_rows(min_row=1, max_row=max_scan_rows), start=1):
+                    non_empty_count = sum(1 for cell in row if cell.value is not None)
+                    if non_empty_count > max_non_empty:
+                        max_non_empty = non_empty_count
+                        header_row = row
+                        header_row_idx = row_idx
+                if max_non_empty > 0:
+                    headers = [cell.value for cell in header_row if cell.value is not None]
+                    sheet_results[ws.title] = (headers, header_row_idx)
+                else:
+                    sheet_results[ws.title] = (None, None)
+            return sheet_results
+    except Exception as e:
+        raise ValueError(f"Error analyzing Excel: {str(e)}")
+
+def analyze_column(file_path, valid_sheets, selected_column, filters=None):
+    """Собирает уникальные значения из указанной колонки с учетом фильтров."""
+    if filters is None:
+        filters = {}
+    try:
+        with safe_workbook(file_path, read_only=True) as wb:
+            categories = set()
+            for sheet_name, (headers, row_idx) in valid_sheets.items():
+                ws = wb[sheet_name]
+                try:
+                    col_index = headers.index(selected_column)
+                except ValueError:
+                    continue
+                for row in ws.iter_rows(min_row=row_idx + 1, values_only=True):
+                    if not validate_row(row, headers, row_idx, filters):
+                        continue
+                    cell_value = row[col_index] if col_index < len(row) else None
+                    if cell_value is not None and str(cell_value).strip() != "":
+                        categories.add(str(cell_value).strip())
+            return sorted(categories)
+    except Exception as e:
+        raise ValueError(f"Error analyzing data: {str(e)}")
+
+─── FILE: excel_utils\filtering.py ───
+
+from analysis import analyze_column
+
+def validate_row(row, headers, header_row_idx, filters):
+    """Проверяет соответствие строки условиям фильтров."""
+    if not filters:
+        return True
+    for col, value in filters.items():
+        try:
+            col_index = headers.index(col)
+            cell_value = row[col_index] if col_index < len(row) else None
+            if str(cell_value).strip() != str(value).strip():
+                return False
+        except ValueError:
+            return False
+    return True
+
+def get_all_combinations(source, valid_sheets, hierarchy_columns, filters=None, level=0):
+    """Возвращает все возможные комбинации фильтров, включая частичные уровни."""
+    if filters is None:
+        filters = {}
+    if level >= len(hierarchy_columns):
+        return [filters.copy()]
+    column = hierarchy_columns[level]
+    categories = analyze_column(source, valid_sheets, column, filters)
+    combinations = []
+    # Добавляем комбинации для текущего уровня без добавления следующих уровней
+    for category in categories:
+        new_filters = filters.copy()
+        new_filters[column] = category
+        combinations.append(new_filters.copy())
+    # Добавляем комбинации для следующих уровней
+    for category in categories:
+        new_filters = filters.copy()
+        new_filters[column] = category
+        combinations.extend(get_all_combinations(source, valid_sheets, hierarchy_columns, new_filters, level + 1))
+    return combinations
+
+def select_categories_sequentially(source, valid_sheets, hierarchy_columns):
+    """Последовательно запрашивает выбор категорий у пользователя с отображением вариантов для каждой комбинации."""
+    all_combinations = []
+    def generate_combinations(level, current_filters, include_all=False):
+        if level >= len(hierarchy_columns):
+            all_combinations.append(current_filters.copy())
+            return
+        column = hierarchy_columns[level]
+        categories = analyze_column(source, valid_sheets, column, current_filters)
+        if not categories:
+            return
+        # Проверяем, является ли текущий уровень последним
+        is_last_level = (level == len(hierarchy_columns) - 1)
+        # Если это не первый уровень и есть предыдущие фильтры
+        if level > 0:
+            print(f"\nCurrent filters:")
+            for col, value in current_filters.items():
+                print(f"  - {col}: {value}")
+            # Если не последний уровень, спрашиваем, хочет ли пользователь выбрать все комбинации
+            if not is_last_level:
+                while True:
+                    all_comb = input(f"Include all categories from '{hierarchy_columns[level]}' for current filters? (y/n): ").strip().lower()
+                    if all_comb == 'y':
+                        # Анализируем все возможные комбинации
+                        for category in categories:
+                            new_filters = current_filters.copy()
+                            new_filters[column] = category
+                            generate_combinations(level + 1, new_filters, True)
+                        return
+                    elif all_comb == 'n':
+                        break
+                    else:
+                        print("Please enter 'y' or 'n'")
+        # Выводим доступные категории с номерами
+        print(f"\nAvailable categories for column '{column}':")
+        for i, cat in enumerate(categories, 1):
+            print(f"  {i}. {cat}")
+        print("  b. Назад")
+        print("  c. Отмена")
+        # Запрашиваем выбор
+        while True:
+            selection = input(f"Enter categories for '{column}' (comma-separated numbers, 'all', 'b' for back, 'c' for cancel): ").strip()
+            # Обработка специальных команд
+            if selection.lower() in ["c", "cancel", "отмена"]:
+                print("Operation cancelled by user")
+                return
+            if selection.lower() in ["b", "back", "назад"]:
+                return
+            # Обработка "all" - выбираем все категории
+            if selection.lower() == "all":
+                selected_categories = categories
+                break
+            # Обработка номеров
+            user_categories = []
+            invalid_inputs = []
+            for item in selection.split(","):
+                item = item.strip()
+                if item.isdigit():
+                    idx = int(item) - 1
+                    if 0 <= idx < len(categories):
+                        user_categories.append(categories[idx])
+                    else:
+                        invalid_inputs.append(item)
+                else:
+                    user_categories.append(item)
+            # Проверка валидности
+            invalid_categories = [cat for cat in user_categories if cat not in categories]
+            if invalid_categories or invalid_inputs:
+                invalid_list = invalid_categories + invalid_inputs
+                print(f"Error: Invalid categories: {', '.join(invalid_list)}")
+                continue
+            selected_categories = user_categories
+            break
+        # Обрабатываем выбор
+        for category in selected_categories:
+            new_filters = current_filters.copy()
+            new_filters[column] = category
+            # Если пользователь выбрал "all" для предыдущего уровня
+            if include_all and level > 0:
+                generate_combinations(level + 1, new_filters, True)
+            else:
+                generate_combinations(level + 1, new_filters)
+    # Начинаем генерацию комбинаций с первого уровня
+    generate_combinations(0, {})
+    # Добавляем частичные уровни фильтрации
+    final_combinations = []
+    for filters in all_combinations:
+        # Добавляем фильтры всех подуровней
+        for i in range(len(hierarchy_columns)):
+            partial_filter = {}
+            for j in range(i + 1):
+                if hierarchy_columns[j] in filters:
+                    partial_filter[hierarchy_columns[j]] = filters[hierarchy_columns[j]]
+            final_combinations.append(partial_filter)
+    # Удаляем дубликаты частичных фильтров
+    unique_combinations = []
+    seen = set()
+    for filters in final_combinations:
+        filter_tuple = tuple(sorted(filters.items()))
+        if filter_tuple not in seen:
+            seen.add(filter_tuple)
+            unique_combinations.append(filters)
+    return unique_combinations
+
+─── FILE: excel_utils\formatting.py ───
+
+import re
+
+def sanitize_filename(name):
+    """Удаляет недопустимые символы из названия файла."""
+    return re.sub(r'[\\/*?:"<>|]', '_', name)
+
+─── FILE: excel_utils\init.py ───
+
+# Импорты для пакета excel_utils
+from .analysis import get_all_sheets_headers, analyze_column
+from .filtering import validate_row, get_all_combinations, select_categories_sequentially
+from .formatting import sanitize_filename
+from .workbook import create_filtered_file
+
+__all__ = [
+    'get_all_sheets_headers',
+    'analyze_column',
+    'validate_row',
+    'get_all_combinations',
+    'select_categories_sequentially',
+    'sanitize_filename',
+    'create_filtered_file'
+]
+
+─── FILE: excel_utils\workbook.py ───
+
+import os
+import re
+from copy import copy
+from contextlib import contextmanager
+import openpyxl
+from analysis import validate_row
+
+def get_column_letter(col_idx):
+    """Конвертирует индекс столбца в букву (1 -> A, 26 -> Z, 27 -> AA и т.д.)"""
+    letters = []
+    while col_idx > 0:
+        col_idx, remainder = divmod(col_idx - 1, 26)
+        letters.append(chr(65 + remainder))
+    return ''.join(reversed(letters))
+
+@contextmanager
+def safe_workbook(file_path, read_only=False):
+    """Контекстный менеджер для безопасной работы с файлами Excel."""
+    wb = None
+    try:
+        wb = openpyxl.load_workbook(file_path, read_only=read_only)
+        yield wb
+    finally:
+        if wb:
+            try:
+                wb.close()
+            except:
+                pass
+
+def create_filtered_file(source, target, valid_sheets, filters):
+    """Создаёт файл с фильтрацией по комбинации условий."""
+    try:
+        # Всегда сохраняем как .xlsx
+        if target.lower().endswith('.xlsm'):
+            target = target[:-5] + '.xlsx'
+        with safe_workbook(source, read_only=False) as wb_source:
+            wb_new = openpyxl.Workbook()
+            wb_new.remove(wb_new.active)
+            has_data = False  # Флаг наличия данных
+            for sheet_name in wb_source.sheetnames:
+                ws_source = wb_source[sheet_name]
+                # Игнорируем скрытые листы
+                if ws_source.sheet_state != 'visible':
+                    continue
+                ws_new = wb_new.create_sheet(title=sheet_name)
+                # Копирование ширины столбцов
+                if hasattr(ws_source, 'column_dimensions'):
+                    for col_letter, dim in ws_source.column_dimensions.items():
+                        try:
+                            ws_new.column_dimensions[col_letter].width = dim.width
+                        except:
+                            pass
+                # Копирование высоты строк
+                if hasattr(ws_source, 'row_dimensions'):
+                    for row_idx, dim in ws_source.row_dimensions.items():
+                        try:
+                            ws_new.row_dimensions[row_idx].height = dim.height
+                        except:
+                            pass
+                # Копирование объединенных ячеек
+                if hasattr(ws_source, 'merged_cells'):
+                    for merged_cell in ws_source.merged_cells.ranges:
+                        try:
+                            ws_new.merge_cells(str(merged_cell))
+                        except:
+                            pass
+                # Копирование условного форматирования
+                if hasattr(ws_source, 'conditional_formatting'):
+                    for cf in ws_source.conditional_formatting:
+                        try:
+                            # Пытаемся скопировать условное форматирование
+                            ws_new.conditional_formatting.add(cf._range, cf)
+                        except Exception as e:
+                            # Пытаемся создать новое условное форматирование с сохранением свойств
+                            try:
+                                new_cf = type(cf)()
+                                for attr in dir(cf):
+                                    if not attr.startswith('_') and not callable(getattr(cf, attr)):
+                                        try:
+                                            setattr(new_cf, attr, getattr(cf, attr))
+                                        except:
+                                            pass
+                                ws_new.conditional_formatting.add(cf._range, new_cf)
+                            except:
+                                pass
+                if sheet_name in valid_sheets:
+                    headers, header_row_idx = valid_sheets[sheet_name]
+                    # 1. Технические строки выше таблицы
+                    for row_idx in range(1, header_row_idx):
+                        for col_idx in range(1, ws_source.max_column + 1):
+                            try:
+                                cell = ws_source.cell(row=row_idx, column=col_idx)
+                                if cell.value is not None or cell.has_style:
+                                    new_cell = ws_new.cell(row=row_idx, column=col_idx, value=cell.value)
+                                    if cell.has_style:
+                                        new_cell.style = cell.style
+                                        new_cell.font = copy(cell.font)
+                                        new_cell.border = copy(cell.border)
+                                        new_cell.fill = copy(cell.fill)
+                                        new_cell.alignment = copy(cell.alignment)
+                                        new_cell.number_format = cell.number_format
+                            except:
+                                pass
+                    # 2. Заголовки
+                    for col_idx in range(1, ws_source.max_column + 1):
+                        try:
+                            cell = ws_source.cell(row=header_row_idx, column=col_idx)
+                            if cell.value is not None or cell.has_style:
+                                new_cell = ws_new.cell(row=header_row_idx, column=col_idx, value=cell.value)
+                                if cell.has_style:
+                                    new_cell.style = cell.style
+                                    new_cell.font = copy(cell.font)
+                                    new_cell.border = copy(cell.border)
+                                    new_cell.fill = copy(cell.fill)
+                                    new_cell.alignment = copy(cell.alignment)
+                                    new_cell.number_format = cell.number_format
+                        except:
+                            pass
+                    # 3. Фильтрация данных
+                    new_row_idx = header_row_idx + 1
+                    for row_idx in range(header_row_idx + 1, ws_source.max_row + 1):
+                        try:
+                            row = ws_source[row_idx]
+                            if not validate_row([cell.value for cell in row], headers, header_row_idx, filters):
+                                continue
+                            for col_idx in range(1, ws_source.max_column + 1):
+                                try:
+                                    source_cell = ws_source.cell(row=row_idx, column=col_idx)
+                                    if source_cell.value is not None or source_cell.has_style:
+                                        new_cell = ws_new.cell(row=new_row_idx, column=col_idx, value=source_cell.value)
+                                        if source_cell.has_style:
+                                            new_cell.style = source_cell.style
+                                            new_cell.font = copy(source_cell.font)
+                                            new_cell.border = copy(source_cell.border)
+                                            new_cell.fill = copy(source_cell.fill)
+                                            new_cell.alignment = copy(source_cell.alignment)
+                                            new_cell.number_format = source_cell.number_format
+                                except:
+                                    pass
+                            new_row_idx += 1
+                        except:
+                            pass
+                    # Проверка наличия данных
+                    if new_row_idx > header_row_idx + 1:
+                        has_data = True
+                    else:
+                        # Удаляем лист без данных
+                        wb_new.remove(ws_new)
+                        continue  # Переходим к следующему листу
+                    # 4. Активируем автофильтр только для строки заголовков
+                    last_col_letter = get_column_letter(ws_source.max_column)
+                    ws_new.auto_filter.ref = f"A{header_row_idx}:{last_col_letter}{header_row_idx}"
+                else:
+                    for row_idx in range(1, ws_source.max_row + 1):
+                        for col_idx in range(1, ws_source.max_column + 1):
+                            try:
+                                cell = ws_source.cell(row=row_idx, column=col_idx)
+                                if cell.value is not None or cell.has_style:
+                                    new_cell = ws_new.cell(row=row_idx, column=col_idx, value=cell.value)
+                                    if cell.has_style:
+                                        new_cell.style = cell.style
+                                        new_cell.font = copy(cell.font)
+                                        new_cell.border = copy(cell.border)
+                                        new_cell.fill = copy(cell.fill)
+                                        new_cell.alignment = copy(cell.alignment)
+                                        new_cell.number_format = cell.number_format
+                            except:
+                                pass
+            if not has_data:
+                # Нет данных - не сохраняем файл
+                return None
+            # Удаляем целевой файл, если он существует
+            if os.path.exists(target):
+                os.remove(target)
+            # Сохраняем как .xlsx
+            wb_new.save(target)
+            return target
+    except Exception as e:
+        raise ValueError(f"Error during filtering: {str(e)}")
+
+─── FILE: gui\init.py ───
+
+# Импорты для пакета gui
+from .placeholder import launch_gui
+
+__all__ = ['launch_gui']
+
+─── FILE: gui\placeholder.py ───
+
+# Заглушка для будущего GUI
+# В следующих итерациях будет заменена на реальную реализацию
+
+def launch_gui():
+    """Запуск графического интерфейса (заглушка)"""
+    print("GUI is not implemented yet. Running CLI version instead.")
+    from cli.interface import main
+    main()
