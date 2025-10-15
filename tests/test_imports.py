@@ -35,10 +35,33 @@ class TestModuleImports(unittest.TestCase):
     def test_import_excel_utils(self):
         """Проверяет, что excel_utils модуль импортируется без ошибок"""
         try:
-            from excel_utils import analysis, filtering, formatting, workbook
+            from excel_utils import (
+                analysis, 
+                filtering, 
+                formatting, 
+                workbook,
+                get_all_sheets_headers,
+                analyze_column,
+                get_all_combinations,
+                select_categories_sequentially,
+                sanitize_filename,
+                generate_short_filename,
+                create_filtered_file
+            )
             self.assertTrue(True)
         except Exception as e:
             self.fail(f"Failed to import excel_utils: {str(e)}")
+    
+    def test_import_specific_functions(self):
+        """Проверяет доступность конкретных функций через пакетный импорт"""
+        try:
+            from excel_utils import (
+                generate_short_filename,
+                create_filtered_file
+            )
+            self.assertTrue(True)
+        except Exception as e:
+            self.fail(f"Failed to import specific functions: {str(e)}")
 
 if __name__ == '__main__':
     unittest.main()

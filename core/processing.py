@@ -1,15 +1,11 @@
 import os
 import logging
-from excel_utils import (
-    get_all_sheets_headers,
-    analyze_column,
-    get_all_combinations,
-    select_categories_sequentially,
-    sanitize_filename,
-    create_filtered_file
-)
-
-logger = logging.getLogger('excel_splitter')
+# Импортируем уже настроенный логгер из logging_config
+from logging_config import logger
+from excel_utils.analysis import get_all_sheets_headers, analyze_column
+from excel_utils.filtering import get_all_combinations, select_categories_sequentially
+from excel_utils.formatting import sanitize_filename, generate_short_filename
+from excel_utils.workbook import create_filtered_file
 
 def process_file():
     """Обрабатывает один файл: выбор файла, директории, колонок, категорий, создание файлов."""
@@ -108,9 +104,12 @@ def process_file():
         created_files = []
         for filters in all_combinations:
             # Формируем имя файла с расширением .xlsx
-            safe_parts = [sanitize_filename(v) for v in filters.values()]
-            suffix = "_".join(safe_parts) if safe_parts else "All"
-            target_file = os.path.join(destination, f"{base_name}_{suffix}.xlsx")
+            short_filename = generate_short_filename(
+                os.path.join(destination, base_name),
+                filters
+            )
+            target_file = os.path.join(destination, short_filename)
+            
             # Создаем файл
             created_file = create_filtered_file(source, target_file, valid_sheets, filters)
             if created_file is not None:

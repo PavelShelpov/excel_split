@@ -202,18 +202,36 @@ def create_filtered_file(source, target, valid_sheets, filters):
                         # Форматируем данные как таблицу
                         last_col_letter = get_column_letter(ws_source.max_column)
                         table_range = f"A{header_row_idx}:{last_col_letter}{new_row_idx-1}"
+                        
+                        # Создаем таблицу
                         table = Table(displayName=f"Table{sheet_name}", ref=table_range)
                         
-                        # Добавляем стиль таблицы
-                        style = TableStyleInfo(
-                            name="TableStyleMedium9",
-                            showFirstColumn=False,
-                            showLastColumn=False,
-                            showRowHeaders=True,
-                            showColumnHeaders=True
-                        )
-                        table.tableStyleInfo = style
+                        # Создаем стиль таблицы с только поддерживаемыми параметрами
+                        try:
+                            # Пытаемся использовать полный набор параметров
+                            style = TableStyleInfo(
+                                name="TableStyleMedium9",
+                                showFirstColumn=False,
+                                showLastColumn=False,
+                                showRowHeaders=True,
+                                showColumnHeaders=True
+                            )
+                        except TypeError:
+                            # Используем базовые параметры, если некоторые не поддерживаются
+                            try:
+                                style = TableStyleInfo(
+                                    name="TableStyleMedium9",
+                                    showFirstColumn=False,
+                                    showLastColumn=False,
+                                    showColumnHeaders=True
+                                )
+                            except TypeError:
+                                # Используем минимальный набор параметров
+                                style = TableStyleInfo(
+                                    name="TableStyleMedium9"
+                                )
                         
+                        table.tableStyleInfo = style
                         ws_new.add_table(table)
                     else:
                         # Удаляем лист без данных
