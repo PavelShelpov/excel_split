@@ -5,8 +5,8 @@ import openpyxl
 from copy import copy
 from contextlib import contextmanager
 from openpyxl.worksheet.table import Table, TableStyleInfo
+from openpyxl.styles import PatternFill
 from excel_utils.common import validate_row
-
 logger = logging.getLogger('excel_splitter')
 
 def get_column_letter(col_idx):
@@ -41,6 +41,54 @@ def safe_workbook(file_path, read_only=False):
                 logger.debug(f"Workbook closed: {file_path}")
             except Exception as e:
                 logger.error(f"Error closing workbook: {str(e)}")
+
+def clean_table_name(name):
+    """Очищает имя таблицы от недопустимых символов и пробелов."""
+    # Удаляем недопустимые символы
+    clean_name = re.sub(r'[^\w]', '', name)
+    # Если имя слишком длинное, сокращаем его
+    if len(clean_name) > 31:
+        clean_name = clean_name[:31]
+    # Если имя пустое, возвращаем дефолтное имя
+    if not clean_name:
+        return "Table"
+    return clean_name
+
+def apply_special_formatting(ws, headers, header_row_idx, data_start_row, data_end_row, max_col):
+    """
+    Применяет специфическое форматирование для колонок с "золотой работник"
+    
+    Правила форматирования:
+    - Если название колонки содержит "золотой работник" (без учета регистра)
+      - Если ячейка содержит: 'пробел', 'нет', 'запланирован', то заливка rgb(255,80,80)
+      - Если 'да', то заливка rgb(150,200,80)
+      - Иначе без заливки
+    """
+    # Нормализуем заголовки для поиска
+    normalized_headers = [str(h).lower() if h is not None else "" for h in headers]
+    
+    # Находим колонки с "золотой работник"
+    special_columns = []
+    for col_idx, header in enumerate(normalized_headers, 1):
+        if "золотой работник" in header:
+            special_columns.append(col_idx)
+    
+    # Применяем форматирование для найденных колонок
+    for col in special_columns:
+        # Проверяем каждую ячейку в колонке
+        for row_idx in range(data_start_row, data_end_row + 1):
+            cell = ws.cell(row=row_idx, column=col)
+            if cell.value:
+                cell_value = str(cell.value).lower()
+                
+                # Проверяем ключевые слова
+                if any(keyword in cell_value for keyword in ['пробел', 'нет', 'запланирован']):
+                    # Красный цвет для отрицательных значений
+                    cell.fill = PatternFill(start_color='FF5050', end_color='FF5050', fill_type='solid')
+                elif 'да' in cell_value:
+                    # Зеленый цвет для позитивных значений
+                    cell.fill = PatternFill(start_color='96C850', end_color='96C850', fill_type='solid')
+                # Иначе оставляем без изменений
 
 def create_filtered_file(source, target, valid_sheets, filters):
     """Создаёт файл с фильтрацией по комбинации условий."""
@@ -100,18 +148,31 @@ def create_filtered_file(source, target, valid_sheets, filters):
                 if hasattr(ws_source, 'conditional_formatting'):
                     for cf in ws_source.conditional_formatting:
                         try:
-                            # Проверяем тип объекта условного форматирования
+                            # Определяем, какой метод использовать для получения диапазона
+                            range_attr = '_get_range' if hasattr(cf, '_get_range') else 'ref'
+                            range_value = getattr(cf, range_attr, None) or cf._range
+                            
+                            # Определяем, какой тип правил используем
                             if hasattr(cf, 'cfRule') and hasattr(cf, 'cfRules'):
                                 # Новые версии openpyxl
                                 for rule in cf.cfRules:
-                                    ws_new.conditional_formatting.add(cf._get_range(), rule)
+                                    try:
+                                        ws_new.conditional_formatting.add(range_value, rule)
+                                    except Exception as e:
+                                        logger.debug(f"Error adding rule in new format: {str(e)}")
                             elif hasattr(cf, 'rules'):
                                 # Средние версии
                                 for rule in cf.rules:
-                                    ws_new.conditional_formatting.add(cf._get_range(), rule)
+                                    try:
+                                        ws_new.conditional_formatting.add(range_value, rule)
+                                    except Exception as e:
+                                        logger.debug(f"Error adding rule in medium format: {str(e)}")
                             else:
                                 # Старые версии
-                                ws_new.conditional_formatting.add(cf._range, cf)
+                                try:
+                                    ws_new.conditional_formatting.add(range_value, cf)
+                                except Exception as e:
+                                    logger.debug(f"Error adding rule in old format: {str(e)}")
                         except Exception as e:
                             logger.debug(f"Error copying conditional formatting: {str(e)}")
                 
@@ -200,39 +261,66 @@ def create_filtered_file(source, target, valid_sheets, filters):
                     if new_row_idx > header_row_idx + 1:
                         has_data = True
                         # Форматируем данные как таблицу
-                        last_col_letter = get_column_letter(ws_source.max_column)
-                        table_range = f"A{header_row_idx}:{last_col_letter}{new_row_idx-1}"
+                        last_col = 0
+                        for col_idx in range(1, ws_source.max_column + 1):
+                            # Проверяем, есть ли данные в этой колонке
+                            has_data_in_col = False
+                            for row_idx in range(header_row_idx, new_row_idx):
+                                if ws_new.cell(row=row_idx, column=col_idx).value is not None:
+                                    has_data_in_col = True
+                                    break
+                            if has_data_in_col:
+                                last_col = col_idx
                         
-                        # Создаем таблицу
-                        table = Table(displayName=f"Table{sheet_name}", ref=table_range)
+                        # Если не определили последнюю колонку, используем max_column
+                        if last_col == 0:
+                            last_col = ws_source.max_column
+                        
+                        last_col_letter = get_column_letter(last_col)
+                        data_start_row = header_row_idx + 1
+                        data_end_row = new_row_idx - 1
+                        
+                        # Убедимся, что таблица включает заголовки и данные
+                        table_range = f"A{header_row_idx}:{last_col_letter}{data_end_row}"
+                        
+                        # Создаем таблицу с безопасным именем
+                        safe_sheet_name = clean_table_name(sheet_name)
+                        table = Table(displayName=safe_sheet_name, ref=table_range)
                         
                         # Создаем стиль таблицы с только поддерживаемыми параметрами
                         try:
-                            # Пытаемся использовать полный набор параметров
+                            # Пытаемся создать стиль с минимально необходимыми параметрами
                             style = TableStyleInfo(
-                                name="TableStyleMedium9",
+                                name="TableStyleLight1",
                                 showFirstColumn=False,
                                 showLastColumn=False,
-                                showRowHeaders=True,
                                 showColumnHeaders=True
                             )
-                        except TypeError:
-                            # Используем базовые параметры, если некоторые не поддерживаются
+                            table.tableStyleInfo = style
+                        except TypeError as e:
+                            logger.warning(f"TableStyleInfo parameters not fully supported: {str(e)}")
                             try:
                                 style = TableStyleInfo(
-                                    name="TableStyleMedium9",
-                                    showFirstColumn=False,
-                                    showLastColumn=False,
+                                    name="TableStyleLight1",
                                     showColumnHeaders=True
                                 )
+                                table.tableStyleInfo = style
                             except TypeError:
-                                # Используем минимальный набор параметров
-                                style = TableStyleInfo(
-                                    name="TableStyleMedium9"
-                                )
+                                logger.warning("Using minimal table style")
+                                style = TableStyleInfo(name="TableStyleLight1")
+                                table.tableStyleInfo = style
                         
-                        table.tableStyleInfo = style
                         ws_new.add_table(table)
+                        
+                        # Применяем специфическое форматирование для колонок "золотой работник"
+                        apply_special_formatting(
+                            ws_new,
+                            headers,
+                            header_row_idx,
+                            data_start_row,
+                            data_end_row,
+                            last_col
+                        )
                     else:
                         # Удаляем лист без данных
                         wb_new.remove(ws_new)

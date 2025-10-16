@@ -29,6 +29,7 @@
 │   ├── test_module_initialization.py
 │   ├── test_special_formats.py
 │   ├── test_table_formatting.py
+│   ├── __init__.py
 
 
 === FILE CONTENTS ===
@@ -42,481 +43,6 @@
 MAX_SCAN_ROWS = 10
 DEFAULT_FILE_EXTENSION = '.xlsx'
 
-─── FILE: iteration_log.txt ───
-
-Итерация #51
-	Ключевые изменения:
-		Заменены импорты из пакета на прямые импорты из модулей для устранения циклических зависимостей
-		Добавлена отладочная информация в __init__.py для диагностики проблем с инициализацией
-		Добавлен тест проверки инициализации всех модулей и доступности критических функций
-	Решенные проблемы:
-		Устранена ошибка ImportError: cannot import name 'generate_short_filename' from 'excel_utils'
-		Обеспечена корректная инициализация всех модулей проекта
-		Добавлена диагностика для выявления подобных проблем в будущем
-	Проблемы:
-		Требуется дальнейшее рефакторинг для полного устранения циклических зависимостей
-		Тесты провалены:
-			(.venv) PS C:\Users\shelp\projects\excel_split> python -m unittest discover
-			Failed to initialize excel_utils package: name 'logging' is not defined
-			Failed to initialize excel_utils package: name 'logging' is not defined
-			EE
-			======================================================================
-			ERROR: cli (unittest.loader._FailedTest.cli)
-			----------------------------------------------------------------------
-			ImportError: Failed to import test module: cli
-			Traceback (most recent call last):
-			File "C:\Users\shelp\AppData\Local\Programs\Python\Python313\Lib\unittest\loader.py", line 429, in _find_test_path     
-				package = self._get_module_from_name(name)
-			File "C:\Users\shelp\AppData\Local\Programs\Python\Python313\Lib\unittest\loader.py", line 339, in _get_module_from_name
-				__import__(name)
-				~~~~~~~~~~^^^^^^
-			File "C:\Users\shelp\projects\excel_split\cli\__init__.py", line 2, in <module>
-				from .interface import main
-			File "C:\Users\shelp\projects\excel_split\cli\interface.py", line 1, in <module>
-				from core.processing import process_file
-			File "C:\Users\shelp\projects\excel_split\core\__init__.py", line 2, in <module>
-				from .processing import process_file
-			File "C:\Users\shelp\projects\excel_split\core\processing.py", line 3, in <module>
-				from excel_utils.analysis import get_all_sheets_headers, analyze_column
-			File "C:\Users\shelp\projects\excel_split\excel_utils\__init__.py", line 21, in <module>
-				logger = logging.getLogger('excel_splitter')
-						^^^^^^^
-			NameError: name 'logging' is not defined. Did you forget to import 'logging'?
-
-
-			======================================================================
-			ERROR: excel_utils (unittest.loader._FailedTest.excel_utils)
-			----------------------------------------------------------------------
-			ImportError: Failed to import test module: excel_utils
-			Traceback (most recent call last):
-			File "C:\Users\shelp\AppData\Local\Programs\Python\Python313\Lib\unittest\loader.py", line 429, in _find_test_path     
-				package = self._get_module_from_name(name)
-			File "C:\Users\shelp\AppData\Local\Programs\Python\Python313\Lib\unittest\loader.py", line 339, in _get_module_from_name
-				__import__(name)
-				~~~~~~~~~~^^^^^^
-			File "C:\Users\shelp\projects\excel_split\excel_utils\__init__.py", line 21, in <module>
-				logger = logging.getLogger('excel_splitter')
-						^^^^^^^
-			NameError: name 'logging' is not defined. Did you forget to import 'logging'?
-
-
-			----------------------------------------------------------------------
-			Ran 2 tests in 0.000s
-
-			FAILED (errors=2)
-
-Итерация #50
-	Ключевые изменения:
-		Исправлен импорт функции generate_short_filename через обновление __init__.py
-		Добавлен тест на проверку корректности импортов всех модулей
-		Улучшена документация экспортируемых функций
-		Проверена доступность всех публичных функций через пакетный импорт
-	Решенные проблемы:
-		Устранена ошибка ImportError: cannot import name 'generate_short_filename'
-		Гарантирован доступ ко всем необходимым функциям через пакетный импорт
-		Добавлены тесты для предотвращения подобных ошибок в будущем
-	Проблемы:
-		Требуется дальнейшее расширение тестового покрытия
-		Нужно рассмотреть автоматизацию проверки импортов через статический анализ
-		Провалены тесты:
-			ImportError: Failed to import test module: cli
-			ImportError: cannot import name 'generate_short_filename' from 'excel_utils'
-
-Итерация #49
-	Ключевые изменения:
-		Исправлена ошибка с TableStyleInfo через использование только поддерживаемых параметров
-		Реализовано сокращение длинных названий категорий по правилам:
-			- Для одного слова: первые 3 буквы
-			- Для двух и более слов: первая буква каждого слова
-		Добавлена проверка длины пути к файлу и автоматическое сокращение при необходимости
-		Добавлены тесты для проверки обработки длинных имен файлов
-	Решенные проблемы (не может быть проверено):
-		Устранена ошибка "TableStyleInfo.__init__() got an unexpected keyword argument 'showRowHeaders'"
-		Устранена проблема с неправильным открытием файлов с длинными именами
-		Добавлено сокращение длинных названий категорий в имена файлов
-		Реализована проверка длины пути к файлу
-	Проблемы:
-		Требуется проверка совместимости с очень старыми версиями Excel
-		Нужно добавить настройки стиля таблиц для пользовательской кастомизации
-		Требуется добавить поддержку специфических таблиц (например, с итогами)
-		ImportError: cannot import name 'generate_short_filename' from 'excel_utils'
-
-Итерация #48
-	Ключевые изменения:
-		Реализована адаптивная обработка условного форматирования для разных версий openpyxl
-		Убраны автофильтры и добавлено форматирование данных как таблиц
-		Оптимизировано логирование для уменьшения количества предупреждений
-		Добавлены тесты для проверки форматирования таблиц
-	Решенные проблемы (не может быть проверено):
-			Устранены ошибки копирования условного форматирования
-			Убраны избыточные предупреждения о неизвестных стилях
-			Добавлено форматирование данных как таблиц в результирующих файлах
-			Убраны автофильтры из результирующих файлов
-	Проблемы:
-		Требуется проверка совместимости с очень старыми версиями Excel
-		Нужно добавить настройки стиля таблиц для пользовательской кастомизации
-		Требуется добавить поддержку специфических таблиц (например, с итогами)
-		Созданные файлы с длинными названиями не открываются
-		КРИТИЧЕСКАЯ ОШИБКА: TableStyleInfo.__init__() got an unexpected keyword argument 'showRowHeaders'
-	Дополнения:
-		Названия всех категорий в названии, кроме последнего (или первого, если категория одна), необходимо сокращать.
-			Например: 'Аппарат управления' -> 'Аппарат управления', 'Аппарат управления_Управление развития_Отдел разработки' -> 'АпУ_УпР_Отдел разработки'
-
-Итерация #47
-	Ключевые изменения:
-		Добавлена обработка неизвестных стилей (SAPBEXstdItem) с логированием вместо ошибок
-		Переработана логика копирования условного форматирования для совместимости с разными версиями openpyxl
-		Добавлены типизированные аннотации и улучшена документация кода
-		Добавлены тесты для обработки специальных форматов и условного форматирования
-	Решенные проблемы:
-		Устранена ошибка "SAPBEXstdItem is not a known style"
-		Устранены проблемы с анализом кода Pylance
-		Добавлены дополнительные тесты для проверки обработки специальных форматов
-	Проблемы:
-		Множество предупреждений Unknown style detected and ignored for data cell
-		Условное форматирование не переносится:
-			Error copying conditional formatting: 'ConditionalFormatting' object has no attribute '_range'
-			Failed to copy conditional formatting: 'ConditionalFormatting' object has no attribute 'type'
-	Дополнения:
-		Убрать добавление автофильров в результирующие файлы
-		Форматировать диапазоны данных в итоговых файлах как таблицы
-
-Итерация #46
-	Ключевые изменения:
-		Исправлены все импорты validate_row по проекту
-		Добавлено детальное логирование для отслеживания работы фильтрации
-		Улучшена обработка пустых фильтров и случаев без совпадений
-		Добавлены тесты для проверки работы фильтрации
-	Решенные проблемы:
-		Устранена ошибка "name 'validate_row' is not defined"
-		Исправлена неправильная обработка случаев без совпадений
-		Добавлены проверки на пустые фильтры
-		Программа отрабатывает полный цикл файлы создаются
-	Возникшие критические проблемы:
-		Нет
-	Возникшие предупреждения:
-		Терминал:
-			Error copying data cell at row 1-2034, col 1-11: SAPBEXstdItem is not a known style
-			Error copying conditional formatting: 'ConditionalFormatting' object has no attribute '_range'
-			Failed to copy conditional formatting: 'ConditionalFormatting' object has no attribute '_range'
-		processing.py 
-			Доступ к "analyze_column" не осуществляется Pylance
-			Доступ к "get_all_combinations" не осуществляется Pylance
-	Требуемые дополнения (обновления):
-		Требуется добавить больше тестов для обработки специальных типов данных
-		Нужно настроить CI/CD для автоматического запуска тестов
-
-Итерация #45
-	Ключевые изменения:
-		Полностью устранены циклические зависимости между модулями
-		Вынесена функция validate_row в отдельный модуль common
-		Добавлены тесты на проверку корректности импортов
-		Добавлены логи для отслеживания процесса загрузки модулей
-	Проблемы решены:
-		Исправлена ошибка импорта, приложение запускается корректно
-		Устранены циклические зависимости между analysis.py и filtering.py
-		Добавлены тесты для проверки загрузки всех модулей
-	Возникшие проблемы:
-		if not validate_row([cell.value for cell in row], headers, header_row_idx, filters):
-			"validate_row" не определено Pylancereport UndefinedVariable
-			(function) validate_row: Any
-		Error processing row 1-2059: name 'validate_row' is not defined
-		No data matched the filters, file not created
-		Warning: No files created (no data matched the filters)
-
-Итерация #44
-	Ключевые изменения:
-		Исправлены имена инициализационных файлов (init.py -> __init__.py)
-		Устранены циклические зависимости между модулями
-		Добавлена система логирования с базовой конфигурацией
-		Добавлена структура для unit-тестов с первым тестом
-	Проблемы решены:
-		Исправлена ошибка импорта, приложение запускается корректно
-			НЕ РЕШЕНО:
-				Traceback (most recent call last):
-					File "c:\Users\Pavel.Shelpov2\projects\excel_split\main.py", line 2, in <module>
-						from cli.interface import main as cli_main
-					File "c:\Users\Pavel.Shelpov2\projects\excel_split\cli\__init__.py", line 2, in <module>
-						from .interface import main
-					File "c:\Users\Pavel.Shelpov2\projects\excel_split\cli\interface.py", line 1, in <module>
-						from core.processing import process_file
-					File "c:\Users\Pavel.Shelpov2\projects\excel_split\core\__init__.py", line 2, in <module>
-						from .processing import process_file
-					File "c:\Users\Pavel.Shelpov2\projects\excel_split\core\processing.py", line 3, in <module>
-						from excel_utils import (
-						...<6 lines>...
-						)
-					File "c:\Users\Pavel.Shelpov2\projects\excel_split\excel_utils\__init__.py", line 3, in <module>
-						from .filtering import validate_row, get_all_combinations, select_categories_sequentially
-					ImportError: cannot import name 'validate_row' from 'excel_utils.filtering' (c:\Users\Pavel.Shelpov2\projects\excel_split\excel_utils\filtering.py)
-		Добавлены логи для отслеживания операций
-		Добавлена базовая структура для тестирования
-	Проблемы:
-		Требуется добавить больше unit-тестов для ключевых функций
-		Нужно настроить CI/CD для автоматического запуска тестов
-
-Итерация #43
-    Ключевые изменения:
-        Внедрена модульная структура проекта: разделение на логические модули (excel_utils, cli, core, gui)
-        Создана основа для расширения: добавлены заготовки для будущего GUI
-        Улучшена поддерживаемость: добавлены типизированные аннотации, оптимизированы импорты
-    Проблемы:
-        Требуется добавление системы логирования для отслеживания операций
-        Нужно внедрить unit-тесты для критически важных функций
-		Работоспособность нарушена:
-			Traceback (most recent call last):
-				File "c:\Users\Pavel.Shelpov2\projects\excel_split\main.py", line 2, in <module>
-					from cli.interface import main as cli_main
-				File "c:\Users\Pavel.Shelpov2\projects\excel_split\cli\interface.py", line 1, in <module>
-					from core.processing import process_file
-				File "c:\Users\Pavel.Shelpov2\projects\excel_split\core\processing.py", line 3, in <module>
-					from excel_utils import (
-					...<7 lines>...
-					)
-			ImportError: cannot import name 'get_all_sheets_headers' from 'excel_utils' (unknown location)
-
-Итерация #42
-	Ключевые изменения:
-		Убрана поддержка .xlsm, все файлы сохраняются как .xlsx.
-		Исправлено копирование условного форматирования для всех типов правил.
-		Упрощена логика сохранения файлов.
-	Проблемы:
-		Нет возможности вернуться и выбрать другой файл после его выбора, только через ctrl+c
-		Многоуровневая фильтрация не дает возможности выбрать все уровни разом, а только точечно
-
-Итерация #41
-	Ключевые изменения:
-		Добавлена опция выбора всех комбинаций с подтверждением.
-		Исправлено копирование условного форматирования для .xlsm файлов.
-		Ограничена область автофильтра только строкой заголовков.
-	Проблемы:
-		Условное форматирование не переносится
-
-Итерация #40
-	Ключевые изменения:
-		Полностью переработана логика выбора категорий с использованием рекурсии для правильного отображения вариантов.
-		Исправлено сохранение .xlsm файлов с макросами.
-		Добавлена обработка частичных уровней фильтрации
-	Проблемы:
-		В результаты xlsm не переносится условное форматирование
-		Кнопки фильтров растягиваются дальше заголовков по строке
-
-Итерация #39
-	Изменено:
-		Полностью переработана логика генерации комбинаций фильтров для множественного выбора.
-		Исправлено сохранение .xlsm файлов с макросами.
-		Добавлена обработка частичных уровней фильтрации.
-	Проблемы:
-		Проблема с комбинациями категорий не исправлена
-		Error: Error during filtering: Workbook.__init__() got an unexpected keyword argument 'keep_vba'
-
-Итерация #38
-	Изменено:
-		Убран недопустимый параметр keep_vba при создании нового файла.
-		Переработана логика выбора категорий для отображения вариантов для каждой комбинации.
-		Исправлено зацикливание при выборе последней колонки.
-	Выявленные проблемы:
-		Проблема с комбинациями категорий не исправлена:
-			Выбираются две колонки, в первой выбираются две категории, для второй выбираются all, ожидается, что для каждой из первых двух категорий будут подобраны все комбинации из второй, чего не проиходит
-
-Итерация #37
-	Изменено:
-		Удален недопустимый параметр keep_vba при создании нового файла.
-		Добавлена корректная обработка макросов для .xlsm файлов через параметр при загрузке.
-		Улучшена логика сохранения макросов при работе с .xlsm файлами.
-	Выявленные проблемы:
-		Не решено: Error: Error during filtering: Workbook.__init__() got an unexpected keyword argument 'keep_vba' после выбора последней категории в любых файлах
-		Выбор категорий уровнями ниже осуществляется некорректно, ищет только пересечения с уровнями выше, а нужно учитывать все комбинации.
-
-Итерация #36
-	Изменено:
-		Добавлена проверка видимости листов при анализе.
-		Исправлена ошибка с keep_vba для .xlsx файлов.
-		Улучшена обработка скрытых листов на всех этапах.
-	Выявленные проблемы:
-		Error: Error during filtering: Workbook.__init__() got an unexpected keyword argument 'keep_vba' после выбора последней категории в любых файлах
-
-Итерация #35
-	Добавлена проверка наличия данных на листе перед добавлением в результирующий файл.
-	Добавлен автофильтр в строку заголовков результирующих файлов.
-	Добавлена поддержка .xlsm файлов с сохранением макросов.
-
-Итерация #34
-	Исправлена обработка ключевого слова "all" в выборе категорий
-	Улучшена логика генерации комбинаций для множественного выбора
-	Создаются файлы для всех выбранных комбинаций, включая частичные уровни
-
-Итерация #33
-	Создана отдельная функция process_file() для обработки одного файла
-	Упрощен главный цикл программы
-	Исправлено зацикливание при выборе последней колонки
-	Добавлена обработка ошибок на каждом этапе
-
-Итерация #32
-	Удален запрос подтверждения после успешного выполнения
-	Программа автоматически возвращается к выбору файла после успешной обработки
-	Улучшена обработка ошибок для бесшовного перехода к следующей итерации
-
-Итерация #31
-	Добавлено отображение колонок в нумерованном списке
-	Улучшена обработка ошибок ввода с возвратом к предыдущему шагу
-	Добавлена возможность отмены шага и исправления предыдущего ввода
-	Исправлена ошибка UnboundLocalError при прерывании через Ctrl+C
-	Улучшена логика создания файлов для всех уровней комбинаций
-
-Итерация #30
-	Разделение на два режима: анализ данных в read-only, создание файлов в полном режиме
-	Добавлены проверки на наличие атрибутов column_dimensions и row_dimensions
-	Улучшена обработка исключений для предотвращения повреждения оригинального файла
-
-Итерация #29
-	Восстановлен режим read_only=False с безопасным управлением ресурсами
-	Добавлены контекстные менеджеры для гарантированного закрытия файлов
-	Улучшена обработка исключений для предотвращения повреждения оригинального файла
-
-Итерация #28
-	Последовательный выбор категорий: пользователь последовательно выбирает категории для каждой колонки
-	Динамический анализ доступных категорий: на каждом этапе отображаются только доступные варианты
-	Оптимизация производительности: кэширование промежуточных результатов
-
-Итерация #27
-	Восстановлена оригинальная фильтрация для одного уровня
-	Иерархическая обработка выделена в отдельную функцию
-	Добавлена возможность отмены операции через Ctrl+C
-
-Итерация #26
-	Переключение на read_only=True для загрузки исходного файла
-	Добавлена явная проверка на существование целевого файла перед сохранением
-	Улучшена обработка исключений для гарантированного закрытия файлов
-
-Итерация #25
-	Восстановлено полное копирование стилей (цвета, шрифты, границы)
-	Сохранение ширины столбцов и высоты строк
-	Исправлено копирование объединенных ячеек
-
-Итерация #24
-	Последовательная обработка уровней сверху вниз
-	Итеративный подход вместо рекурсии
-	Проверка данных перед созданием файлов
-
-Итерация #23
-	Упрощенная логика фильтрации при выборе одной колонки
-	Добавлена опция выбора нескольких категорий
-	Генерация имен файлов с префиксами уровней
-
-Итерация #22
-	Восстановлено полное копирование стилей (цвета, шрифты, границы)
-	Сохранение ширины столбцов и высоты строк
-	Исправлено копирование объединенных ячеек
-
-Итерация #21
-	Устранена проблема с техническими строками ниже таблицы
-	Оптимизирована производительность за счет упрощения копирования стилей
-	Восстановлена базовая фильтрация для одной колонки
-
-Итерация #20
-	Восстановлена оригинальная фильтрация для одного уровня
-	Иерархическая обработка выделена в отдельную функцию
-	Добавлена возможность отмены операции через Ctrl+C
-
-Итерация #19
-	Последовательная обработка уровней сверху вниз
-	Итеративный подход вместо рекурсии
-	Проверка данных перед созданием файлов
-
-Итерация #18
-	Поддержка выбора нескольких колонок через запятую
-	Создание файлов для каждого уровня иерархии
-	Формирование имен файлов с префиксами всех предыдущих уровней
-
-Итерация #17
-	Добавлена поддержка множественного выбора категорий через запятую и ключевое слово "all"
-	Генерация имен файлов с суффиксом категории и защитой от недопустимых символов
-	Циклическая обработка каждой категории с созданием отдельных файлов
-
-Итерация #16
-	Устранены предупреждения через импорт copy и замену .copy()
-	Сохранение числовых форматов (даты, валюта) через number_format
-	Полная совместимость с openpyxl без предупреждений
-
-Итерация #15
-	Полное сохранение форматирования: стили, объединения, ширина/высота
-	Сохранение технических строк выше и ниже таблицы
-	Создание нового файла "с нуля" без внешних зависимостей
-
-Итерация #14
-	Создание чистого файла без внешних зависимостей через Workbook()
-	Копирование только значений ячеек (без форматирования)
-	Гарантированная совместимость с Excel
-
-Итерация #13
-	Условное удаление временного файла только при изменении расширения
-	Обработка регистра в путях через os.path.normcase
-	Удаление временного файла при ошибке
-
-Итерация #12
-	Удаление внешних зависимостей (Power Query) через загрузку без keep_vba/keep_links
-	Принудительное сохранение как .xlsx
-	Упрощенная логика без проверки VBA
-
-Итерация #11
-	Безопасная проверка VBA-кода через hasattr()
-	Резервное определение формата по расширению исходника
-	Совместимость с любыми версиями openpyxl
-
-Итерация #10
-	Динамическое определение формата сохранения (xlsx/xlsm)
-	Удаление временного битого файла после сохранения
-	Сохранение структуры книги при наличии макросов
-
-Итерация #9
-	Сначала копирование, затем фильтрация скопированного файла
-	Безопасное удаление строк снизу вверх для сохранения индексов
-	Удаление эмодзи, текстовые сообщения
-
-Итерация #8
-	Фильтрация данных в скопированном файле
-	Удаление строк снизу вверх для сохранения индексов
-	Сохранение форматирования и структуры книги
-
-Итерация #7
-	Добавлен выбор колонки для анализа
-	Сбор уникальных значений (категорий) по всем листам
-	Вывод отсортированных категорий с нумерацией
-
-Итерация #6
-	Анализ всех листов в книге
-	Поиск пересечения заголовков между листами
-	Вывод информации по каждому листу и общих колонок
-
-Итерация #5
-	Эвристический поиск заголовков в первых 10 строках
-	Определение строки с максимальным количеством данных
-	Вывод номера строки с заголовками
-
-Итерация #4
-	Добавлена обработка Excel через openpyxl
-	Проверка расширения файла (.xlsx)
-	Чтение заголовков из первой строки
-
-Итерация #3
-	Переход с CLI-аргументов на интерактивный ввод
-	Исправление обработки путей с пробелами
-	Добавлены подсказки для пользователя
-
-Итерация #2
-	Удален Flask, переход на CLI-скрипт
-	Простой интерфейс через аргументы командной строки
-	Упрощенная структура без веб-сервера
-
-Итерация #1
-	Добавлен эндпоинт /copy для копирования файлов
-	Проверка существования исходного файла
-	Автоматическое создание целевой директории
-
-Итерация #0
-	Инициализация проекта
-	Отказ от слоев из-за простоты задачи
 
 ─── FILE: logging_config.py ───
 
@@ -528,16 +54,17 @@ def setup_logging():
     logger = logging.getLogger('excel_splitter')
     logger.setLevel(logging.INFO)
     
-    # Создаем обработчик для вывода в консоль
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
-    
-    # Формат логов
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    console_handler.setFormatter(formatter)
-    
-    # Добавляем обработчик, если он еще не добавлен
+    # Проверяем, не добавлены ли уже обработчики
     if not logger.handlers:
+        # Создаем обработчик для вывода в консоль
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.INFO)
+        
+        # Формат логов
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        console_handler.setFormatter(formatter)
+        
+        # Добавляем обработчик
         logger.addHandler(console_handler)
     
     return logger
@@ -548,14 +75,35 @@ logger = setup_logging()
 ─── FILE: main.py ───
 
 import sys
+from logging_config import logger  # Импортируем уже настроенный логгер
 from cli.interface import main as cli_main
 
 def run():
     """Точка входа в приложение. Может быть расширена для поддержки GUI в будущем"""
+    logger.info("Application started")
     cli_main()
+    
+def check_dependencies():
+    try:
+        import openpyxl
+        version = openpyxl.__version__
+        # Проверяем минимальную версию
+        major, minor, _ = map(int, version.split('.'))
+        if major < 3:
+            logger.error("OpenPyXL version 3.0+ is required. Current version: %s", version)
+            return False
+        return True
+    except ImportError:
+        logger.error("OpenPyXL is not installed. Please install it with 'pip install openpyxl'")
+        return False
 
 if __name__ == "__main__":
-    run()
+    try:
+        if check_dependencies():
+            run()
+    except Exception as e:
+        logger.exception("Critical error in application")
+        sys.exit(1)
 
 ─── FILE: cli\interface.py ───
 
@@ -588,12 +136,12 @@ __all__ = ['main']
 
 import os
 import logging
+# Импортируем уже настроенный логгер из logging_config
+from logging_config import logger
 from excel_utils.analysis import get_all_sheets_headers, analyze_column
 from excel_utils.filtering import get_all_combinations, select_categories_sequentially
 from excel_utils.formatting import sanitize_filename, generate_short_filename
 from excel_utils.workbook import create_filtered_file
-
-logger = logging.getLogger('excel_splitter')
 
 def process_file():
     """Обрабатывает один файл: выбор файла, директории, колонок, категорий, создание файлов."""
@@ -808,7 +356,6 @@ def analyze_column(file_path, valid_sheets, selected_column, filters=None):
 ─── FILE: excel_utils\common.py ───
 
 import logging
-
 logger = logging.getLogger('excel_splitter')
 
 def validate_row(row, headers, header_row_idx, filters):
@@ -819,16 +366,23 @@ def validate_row(row, headers, header_row_idx, filters):
         logger.debug("No filters provided, row is valid")
         return True
         
+    # Нормализуем заголовки к нижнему регистру
+    normalized_headers = [str(header).lower() if header is not None else "" for header in headers]
+    
     for col, value in filters.items():
+        # Нормализуем имя колонки к нижнему регистру
+        normalized_col = str(col).lower()
+        
         try:
-            col_index = headers.index(col)
+            col_index = normalized_headers.index(normalized_col)
             cell_value = row[col_index] if col_index < len(row) else None
             str_value = str(cell_value).strip() if cell_value is not None else ""
             str_filter = str(value).strip()
             
             logger.debug(f"Checking column '{col}': cell value='{str_value}', filter='{str_filter}'")
             
-            if str_value != str_filter:
+            # Сравниваем без учета регистра
+            if str_value.lower() != str_filter.lower():
                 logger.debug(f"Row does not match filter for column '{col}'")
                 return False
         except ValueError:
@@ -981,7 +535,6 @@ import re
 import os
 import logging
 from openpyxl.utils import get_column_letter
-
 logger = logging.getLogger('excel_splitter')
 
 def sanitize_filename(name):
@@ -995,27 +548,49 @@ def sanitize_filename(name):
 def shorten_category_name(name):
     """
     Сокращает длинные названия категорий по правилам:
-    - Для одного слова: первые 3 буквы
-    - Для двух и более слов: первая буква каждого слова
+    - Для одного слова: первые 2 буквы, первая заглавная, вторая строчная
+    - Для двух и более слов: первая буква первого слова в верхнем регистре, 
+      вторая буква первого слова в нижнем регистре, первая буква второго слова в верхнем регистре
     """
     if not name:
         return ""
     
     # Удаляем недопустимые символы
     name = sanitize_filename(name)
+    # Нормализуем пробелы
+    name = re.sub(r'\s+', ' ', name).strip()
     
     # Если название короткое, оставляем как есть
-    if len(name) <= 15:
+    if len(name) <= 3:
         return name
     
-    # Разбиваем на слова и берем первую букву каждого
+    # Разбиваем на слова
     words = name.split()
     if len(words) > 1:
-        # Берем первую букву каждого слова
-        short_name = ''.join(word[0] for word in words if word)
+        # Для двух и более слов
+        first_word = words[0]
+        second_word = words[1] if len(words) > 1 else ""
+        
+        # Формируем сокращение: первая буква первого слова (заглавная), 
+        # вторая буква первого слова (строчная), первая буква второго слова (заглавная)
+        short_name = ""
+        if len(first_word) > 0:
+            short_name += first_word[0].upper()
+        if len(first_word) > 1:
+            short_name += first_word[1].lower()
+        if len(second_word) > 0:
+            short_name += second_word[0].upper()
+        
+        # Если не получилось сократить до 3 символов, берем первые 3 буквы
+        if len(short_name) < 3:
+            short_name = name[:3].upper()
     else:
-        # Для одного слова берем первые 3 буквы
-        short_name = name[:3]
+        # Для одного слова
+        short_name = name[:2]
+        if len(short_name) == 1:
+            short_name = short_name.upper()
+        elif len(short_name) == 2:
+            short_name = short_name[0].upper() + short_name[1].lower()
     
     return short_name
 
@@ -1066,7 +641,6 @@ from copy import copy
 from contextlib import contextmanager
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from excel_utils.common import validate_row
-
 logger = logging.getLogger('excel_splitter')
 
 def get_column_letter(col_idx):
@@ -1160,18 +734,31 @@ def create_filtered_file(source, target, valid_sheets, filters):
                 if hasattr(ws_source, 'conditional_formatting'):
                     for cf in ws_source.conditional_formatting:
                         try:
-                            # Проверяем тип объекта условного форматирования
+                            # Определяем, какой метод использовать для получения диапазона
+                            range_attr = '_get_range' if hasattr(cf, '_get_range') else 'ref'
+                            range_value = getattr(cf, range_attr, None) or cf._range
+                            
+                            # Определяем, какой тип правил используем
                             if hasattr(cf, 'cfRule') and hasattr(cf, 'cfRules'):
                                 # Новые версии openpyxl
                                 for rule in cf.cfRules:
-                                    ws_new.conditional_formatting.add(cf._get_range(), rule)
+                                    try:
+                                        ws_new.conditional_formatting.add(range_value, rule)
+                                    except Exception as e:
+                                        logger.debug(f"Error adding rule in new format: {str(e)}")
                             elif hasattr(cf, 'rules'):
                                 # Средние версии
                                 for rule in cf.rules:
-                                    ws_new.conditional_formatting.add(cf._get_range(), rule)
+                                    try:
+                                        ws_new.conditional_formatting.add(range_value, rule)
+                                    except Exception as e:
+                                        logger.debug(f"Error adding rule in medium format: {str(e)}")
                             else:
                                 # Старые версии
-                                ws_new.conditional_formatting.add(cf._range, cf)
+                                try:
+                                    ws_new.conditional_formatting.add(range_value, cf)
+                                except Exception as e:
+                                    logger.debug(f"Error adding rule in old format: {str(e)}")
                         except Exception as e:
                             logger.debug(f"Error copying conditional formatting: {str(e)}")
                 
@@ -1261,35 +848,21 @@ def create_filtered_file(source, target, valid_sheets, filters):
                         has_data = True
                         # Форматируем данные как таблицу
                         last_col_letter = get_column_letter(ws_source.max_column)
+                        # Исправлен диапазон таблицы
                         table_range = f"A{header_row_idx}:{last_col_letter}{new_row_idx-1}"
-                        
-                        # Создаем таблицу
                         table = Table(displayName=f"Table{sheet_name}", ref=table_range)
                         
-                        # Создаем стиль таблицы с только поддерживаемыми параметрами
-                        try:
-                            # Пытаемся использовать полный набор параметров
-                            style = TableStyleInfo(
-                                name="TableStyleMedium9",
-                                showFirstColumn=False,
-                                showLastColumn=False,
-                                showRowHeaders=True,
-                                showColumnHeaders=True
-                            )
-                        except TypeError:
-                            # Используем базовые параметры, если некоторые не поддерживаются
-                            try:
-                                style = TableStyleInfo(
-                                    name="TableStyleMedium9",
-                                    showFirstColumn=False,
-                                    showLastColumn=False,
-                                    showColumnHeaders=True
-                                )
-                            except TypeError:
-                                # Используем минимальный набор параметров
-                                style = TableStyleInfo(
-                                    name="TableStyleMedium9"
-                                )
+                        # Используем стандартный стиль таблицы
+                        style = TableStyleInfo(
+                            name="TableStyleLight1",
+                            showFirstColumn=False,
+                            showLastColumn=False,
+                            showRowHeaders=True,
+                            showColumnHeaders=True
+                        )
+                        
+                        # Убедимся, что все заголовки таблицы - строки
+                        headers_str = [str(h) if h is not None else "" for h in headers]
                         
                         table.tableStyleInfo = style
                         ws_new.add_table(table)
@@ -1358,10 +931,10 @@ try:
         'validate_row'
     ]
     
-    # Проверка инициализации
-    logger = logging.getLogger('excel_splitter')
-    logger.debug("excel_utils package initialized successfully")
+    # Убираем логгирование из __init__.py
+    # Логгирование должно происходить в main.py после полной инициализации
 except Exception as e:
+    # Добавляем импорт logging ДО использования
     import logging
     logger = logging.getLogger('excel_splitter')
     logger.error(f"Failed to initialize excel_utils package: {str(e)}")
@@ -1470,12 +1043,16 @@ class TestFilenameShortening(unittest.TestCase):
         self.assertEqual(shorten_category_name("IT"), "IT")
         
         # Тест с одним длинным словом
-        self.assertEqual(shorten_category_name("Department"), "Dep")
+        self.assertEqual(shorten_category_name("Department"), "De")
+        self.assertEqual(shorten_category_name("A"), "A")
+        self.assertEqual(shorten_category_name("Ab"), "Ab")
+        self.assertEqual(shorten_category_name("Abc"), "Ab")
         
         # Тест с несколькими словами
-        self.assertEqual(shorten_category_name("Human Resources"), "HR")
-        self.assertEqual(shorten_category_name("Apparatus Management"), "AM")
-        self.assertEqual(shorten_category_name("Apparatus Management Development"), "AMD")
+        self.assertEqual(shorten_category_name("Human Resources"), "HuR")
+        self.assertEqual(shorten_category_name("Apparatus Management"), "ApM")
+        self.assertEqual(shorten_category_name("Apparatus Management Development"), "ApM")
+        self.assertEqual(shorten_category_name("Apparatus Management Development Department"), "ApM")
     
     def test_generate_short_filename(self):
         """Проверяет генерацию коротких имен файлов"""
@@ -1487,7 +1064,7 @@ class TestFilenameShortening(unittest.TestCase):
             "Project": "New Project"
         }
         filename = generate_short_filename(base_path, filters)
-        self.assertEqual(filename, "base_file_HR_Dev_New Project.xlsx")
+        self.assertEqual(filename, "base_file_HuR_Dev_New Project.xlsx")
         
         # Сокращение для длинных имен
         base_path = os.path.join(self.temp_dir, "base_file")
@@ -1496,7 +1073,7 @@ class TestFilenameShortening(unittest.TestCase):
             "Team": "Development Team for New Projects"
         }
         filename = generate_short_filename(base_path, filters)
-        self.assertEqual(filename, "base_file_AMDD_DTNPNP.xlsx")
+        self.assertEqual(filename, "base_file_ApM_DT.xlsx")
         
         # Проверка ограничения длины
         base_path = os.path.join(self.temp_dir, "very_long_base_name" * 10)
@@ -1924,3 +1501,7 @@ class TestTableFormatting(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+─── FILE: tests\__init__.py ───
+
+

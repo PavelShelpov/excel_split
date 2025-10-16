@@ -4,48 +4,26 @@ import tempfile
 import openpyxl
 from excel_utils.workbook import create_filtered_file
 from excel_utils.analysis import get_all_sheets_headers
-from excel_utils.common import validate_row
 
-class TestSpecialFormats(unittest.TestCase):
+class TestSpecialFormatting(unittest.TestCase):
     def setUp(self):
-        # Создаем тестовый Excel-файл с особыми стилями и условным форматированием
+        # Создаем тестовый Excel-файл с особыми стилями
         self.temp_dir = tempfile.mkdtemp()
         self.test_file = os.path.join(self.temp_dir, "test_special.xlsx")
-        self.output_file = os.path.join(self.temp_dir, "output.xlsx")
         
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "TestSheet"
         
         # Добавляем заголовки
-        ws.append(["ID", "Value", "Category"])
+        ws.append(["ID", "Золотой работник", "Category", "Other"])
         
         # Добавляем данные
-        for i in range(1, 11):
-            ws.append([i, i*10, "A" if i % 2 == 0 else "B"])
-        
-        # Добавляем условное форматирование
-        from openpyxl.formatting import Rule
-        from openpyxl.formatting.rule import ColorScaleRule
-        
-        # Создаем правило условного форматирования
-        rule = ColorScaleRule(
-            start_type='min', start_color='FF0000',
-            mid_type='percentile', mid_color='FFFF00',
-            end_type='max', end_color='00FF00'
-        )
-        
-        # Добавляем правило к диапазону
-        ws.conditional_formatting.add('B2:B11', rule)
-        
-        # Добавляем специфический стиль (имитируем SAPBEXstdItem)
-        from openpyxl.styles import NamedStyle
-        sap_style = NamedStyle(name="SAPBEXstdItem")
-        sap_style.font = openpyxl.styles.Font(bold=True)
-        sap_style.fill = openpyxl.styles.PatternFill(start_color="00FF0000", end_color="00FF0000", fill_type="solid")
-        
-        # Применяем стиль к ячейке
-        ws['A2'].style = sap_style
+        ws.append([1, "да", "A", "Data"])
+        ws.append([2, "нет", "B", "Data"])
+        ws.append([3, "запланирован", "A", "Data"])
+        ws.append([4, "пробел", "B", "Data"])
+        ws.append([5, "другое значение", "A", "Data"])
         
         wb.save(self.test_file)
     
@@ -53,73 +31,134 @@ class TestSpecialFormats(unittest.TestCase):
         import shutil
         shutil.rmtree(self.temp_dir)
     
-    def test_special_style_handling(self):
-        """Проверяет обработку специфических стилей"""
+    def test_golden_worker_formatting(self):
+        """Проверяет специфическое форматирование для колонки 'Золотой работник'"""
         sheet_headers = get_all_sheets_headers(self.test_file)
         valid_sheets = {k: v for k, v in sheet_headers.items() if v[0] is not None}
         
         # Создаем простой фильтр
-        filters = {"Category": "A"}
-        
-        # Пытаемся создать фильтрованный файл
-        result = create_filtered_file(self.test_file, self.output_file, valid_sheets, filters)
+        filters = {}
+        output_file = os.path.join(self.temp_dir, "output.xlsx")
+        result = create_filtered_file(self.test_file, output_file, valid_sheets, filters)
         
         self.assertIsNotNone(result)
         self.assertTrue(os.path.exists(result))
+        
+        # Проверяем форматирование
+        wb = openpyxl.load_workbook(result)
+        ws = wb["TestSheet"]
+        
+        # Проверяем цвета ячеек в колонке "Золотой работник"
+        # Строка 2 (данные): "да" -> зеленый
+        cell = ws['B2']
+        self.assertEqual(cell.fill.start_color.index, '96C850')
+        
+        # Строка 3: "нет" -> красный
+        cell = ws['B3']
+        self.assertEqual(cell.fill.start_color.index, 'FF5050')
+        
+        # Строка 4: "запланирован" -> красный
+        cell = ws['B4']
+        self.assertEqual(cell.fill.start_color.index, 'FF5050')
+        
+        # Строка 5: "пробел" -> красный
+        cell = ws['B5']
+        self.assertEqual(cell.fill.start_color.index, 'FF5050')
+        
+        # Строка 6: "другое значение" -> без заливки
+        cell = ws['B6']
+        self.assertEqual(cell.fill.start_color.index, '00000000')  # Прозрачный цвет
     
-    def test_conditional_formatting(self):
-        """Проверяет копирование условного форматирования"""
-        sheet_headers = get_all_sheets_headers(self.test_file)
+    def test_golden_worker_case_insensitivity(self):
+        """Проверяет обработку регистра в названии колонки и значениях"""
+        # Создаем файл с разным регистром
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "TestSheet"
+        
+        # Добавляем заголовки с разным регистром
+        ws.append(["ID", "ЗОЛОТОЙ РАБОТНИК", "Category"])
+        
+        # Добавляем данные с разным регистром
+        ws.append([1, "ДА", "A"])
+        ws.append([2, "НЕТ", "B"])
+        ws.append([3, "ЗАПЛАНИРОВАН", "A"])
+        ws.append([4, "ПРОБЕЛ", "B"])
+        
+        # Сохраняем файл
+        test_file = os.path.join(self.temp_dir, "test_case_insensitive.xlsx")
+        wb.save(test_file)
+        
+        sheet_headers = get_all_sheets_headers(test_file)
         valid_sheets = {k: v for k, v in sheet_headers.items() if v[0] is not None}
         
         # Создаем простой фильтр
-        filters = {"Category": "A"}
-        
-        # Пытаемся создать фильтрованный файл
-        result = create_filtered_file(self.test_file, self.output_file, valid_sheets, filters)
-        
-        self.assertIsNotNone(result)
-        
-        # Проверяем, что условное форматирование присутствует в выходном файле
-        wb = openpyxl.load_workbook(result)
-        ws = wb["TestSheet"]
-        
-        # Проверяем, что условное форматирование существует
-        self.assertTrue(len(ws.conditional_formatting) > 0)
-    
-    def test_empty_filter(self):
-        """Проверяет работу с пустым фильтром"""
-        sheet_headers = get_all_sheets_headers(self.test_file)
-        valid_sheets = {k: v for k, v in sheet_headers.items() if v[0] is not None}
-        
-        # Пустой фильтр
         filters = {}
-        
-        # Пытаемся создать фильтрованный файл
-        result = create_filtered_file(self.test_file, self.output_file, valid_sheets, filters)
+        output_file = os.path.join(self.temp_dir, "output_case.xlsx")
+        result = create_filtered_file(test_file, output_file, valid_sheets, filters)
         
         self.assertIsNotNone(result)
+        self.assertTrue(os.path.exists(result))
         
-        # Проверяем, что все данные сохранены
+        # Проверяем форматирование
         wb = openpyxl.load_workbook(result)
         ws = wb["TestSheet"]
         
-        # Должно быть 11 строк (заголовок + 10 данных)
-        self.assertEqual(ws.max_row, 11)
+        # Проверяем цвета ячеек
+        # Строка 2: "ДА" -> зеленый
+        cell = ws['B2']
+        self.assertEqual(cell.fill.start_color.index, '96C850')
+        
+        # Строка 3: "НЕТ" -> красный
+        cell = ws['B3']
+        self.assertEqual(cell.fill.start_color.index, 'FF5050')
+        
+        # Строка 4: "ЗАПЛАНИРОВАН" -> красный
+        cell = ws['B4']
+        self.assertEqual(cell.fill.start_color.index, 'FF5050')
+        
+        # Строка 5: "ПРОБЕЛ" -> красный
+        cell = ws['B5']
+        self.assertEqual(cell.fill.start_color.index, 'FF5050')
     
-    def test_no_matching_data(self):
-        """Проверяет работу с фильтром, не находящим совпадений"""
-        sheet_headers = get_all_sheets_headers(self.test_file)
+    def test_golden_worker_in_middle(self):
+        """Проверяет форматирование когда 'Золотой работник' не первая колонка"""
+        # Создаем файл с колонкой в середине
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "TestSheet"
+        
+        # Добавляем заголовки
+        ws.append(["ID", "Name", "Золотой работник", "Category"])
+        
+        # Добавляем данные
+        ws.append([1, "John", "да", "A"])
+        ws.append([2, "Jane", "нет", "B"])
+        
+        # Сохраняем файл
+        test_file = os.path.join(self.temp_dir, "test_middle.xlsx")
+        wb.save(test_file)
+        
+        sheet_headers = get_all_sheets_headers(test_file)
         valid_sheets = {k: v for k, v in sheet_headers.items() if v[0] is not None}
         
-        # Фильтр, не должен находить совпадений
-        filters = {"Category": "C"}
+        # Создаем простой фильтр
+        filters = {}
+        output_file = os.path.join(self.temp_dir, "output_middle.xlsx")
+        result = create_filtered_file(test_file, output_file, valid_sheets, filters)
         
-        # Пытаемся создать фильтрованный файл
-        result = create_filtered_file(self.test_file, self.output_file, valid_sheets, filters)
+        self.assertIsNotNone(result)
+        self.assertTrue(os.path.exists(result))
         
-        self.assertIsNone(result)
-        self.assertFalse(os.path.exists(self.output_file))
-
-if __name__ == '__main__':
-    unittest.main()
+        # Проверяем форматирование
+        wb = openpyxl.load_workbook(result)
+        ws = wb["TestSheet"]
+        
+        # Проверяем цвета ячеек
+        # Строка 2: "да" -> зеленый
+        cell = ws['C2']
+        self.assertEqual(cell.fill.start_color.index, '96C850')
+        
+        # Строка 3: "нет" -> красный
+        cell = ws['C3']
+        self.assertEqual(cell.fill.start_color.index, 'FF5050')

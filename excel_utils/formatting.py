@@ -2,7 +2,6 @@ import re
 import os
 import logging
 from openpyxl.utils import get_column_letter
-
 logger = logging.getLogger('excel_splitter')
 
 def sanitize_filename(name):
@@ -13,30 +12,43 @@ def sanitize_filename(name):
     name = re.sub(r'\s+', ' ', name).strip()
     return name
 
-def shorten_category_name(name):
+def shorten_category_name(name, is_last=False):
     """
-    Сокращает длинные названия категорий по правилам:
-    - Для одного слова: первые 3 буквы
-    - Для двух и более слов: первая буква каждого слова
+    Сокращает длинные названия категорий по новым правилам:
+    - Для одной категории: полное название
+    - Для нескольких категорий: все, кроме последней, сокращаются по правилам:
+        * Две первые буквы первого слова (первая в верхнем, вторая в нижнем регистре)
+        * Первая буква каждого последующего слова в верхнем регистре
     """
-    if not name:
-        return ""
+    if not name or is_last:
+        return name
     
     # Удаляем недопустимые символы
     name = sanitize_filename(name)
+    # Нормализуем пробелы
+    name = re.sub(r'\s+', ' ', name).strip()
     
-    # Если название короткое, оставляем как есть
-    if len(name) <= 15:
+    # Делаем сокращение только если длина превышает 3 символа
+    if len(name) <= 3:
         return name
     
-    # Разбиваем на слова и берем первую букву каждого
+    # Разбиваем на слова
     words = name.split()
-    if len(words) > 1:
-        # Берем первую букву каждого слова
-        short_name = ''.join(word[0] for word in words if word)
+    if len(words) == 0:
+        return name
+    
+    # Формируем сокращение
+    if len(words[0]) >= 2:
+        # Берем первые две буквы первого слова (первая заглавная, вторая строчная)
+        short_name = words[0][0].upper() + words[0][1].lower()
     else:
-        # Для одного слова берем первые 3 буквы
-        short_name = name[:3]
+        # Если первое слово короткое, берем первую букву в верхнем регистре
+        short_name = words[0][0].upper() if len(words[0]) > 0 else ""
+    
+    # Добавляем первые буквы остальных слов в верхнем регистре
+    for word in words[1:]:
+        if word:
+            short_name += word[0].upper()
     
     return short_name
 
@@ -47,11 +59,12 @@ def generate_short_filename(base_name, filters, max_length=150):
     """
     # Создаем список сокращенных названий категорий
     safe_parts = []
-    for i, (col, value) in enumerate(filters.items()):
-        if i == len(filters) - 1:  # Последняя категория - не сокращаем
-            safe_parts.append(sanitize_filename(value))
-        else:
-            safe_parts.append(shorten_category_name(value))
+    category_names = list(filters.values())
+    
+    for i, value in enumerate(category_names):
+        is_last = (i == len(category_names) - 1)
+        short_name = shorten_category_name(value, is_last)
+        safe_parts.append(sanitize_filename(short_name))
     
     # Формируем суффикс
     suffix = "_".join(safe_parts) if safe_parts else "All"
