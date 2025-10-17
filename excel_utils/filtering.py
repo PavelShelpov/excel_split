@@ -6,15 +6,21 @@ def get_all_combinations(source, valid_sheets, hierarchy_columns, filters=None, 
     """Возвращает все возможные комбинации фильтров, включая частичные уровни."""
     if filters is None:
         filters = {}
+    
+    # Если достигли конца иерархии, возвращаем текущие фильтры
     if level >= len(hierarchy_columns):
         return [filters.copy()]
     
     column = hierarchy_columns[level]
-    logger.debug(f"Getting categories for column {column} with filters {filters}")
     categories = analyze_column(source, valid_sheets, column, filters)
+    
+    # Если нет категорий, возвращаем пустой список
+    if not categories:
+        return []
+    
     combinations = []
     
-    # Добавляем комбинации для текущего уровня
+    # Добавляем комбинации для текущего уровня без добавления следующих уровней
     for category in categories:
         new_filters = filters.copy()
         new_filters[column] = category
@@ -33,7 +39,7 @@ def select_categories_sequentially(source, valid_sheets, hierarchy_columns):
     logger.info("Starting sequential category selection")
     all_combinations = []
     
-    def generate_combinations(level, current_filters):
+    def generate_combinations(level, current_filters, include_all=False):
         """Рекурсивная функция генерации комбинаций"""
         if level >= len(hierarchy_columns):
             all_combinations.append(current_filters.copy())
@@ -41,122 +47,119 @@ def select_categories_sequentially(source, valid_sheets, hierarchy_columns):
         
         column = hierarchy_columns[level]
         categories = analyze_column(source, valid_sheets, column, current_filters)
+        
         if not categories:
+            logger.warning(f"No categories found for column '{column}' at level {level}")
             return
         
-        # Проверяем, является ли текущий уровень последним
-        is_last_level = (level == len(hierarchy_columns) - 1)
-        
-        # Если это не первый уровень и есть предыдущие фильтры
+        # Показываем текущие фильтры, если это не первый уровень
         if level > 0:
-            print(f"\nCurrent filters:")
+            print("\nCurrent filters:")
             for col, value in current_filters.items():
                 print(f"  - {col}: {value}")
         
-        # Если это последний уровень, просто добавляем все категории
-        if is_last_level:
-            for category in categories:
-                new_filters = current_filters.copy()
-                new_filters[column] = category
-                all_combinations.append(new_filters)
-            return
-        
-        # Если не последний уровень, спрашиваем, хочет ли пользователь выбрать все комбинации
-        while True:
-            all_comb = input(f"Include all categories from '{hierarchy_columns[level]}' for current filters? (y/n): ").strip().lower()
-            if all_comb == 'y':
-                # Обрабатываем все категории для текущего уровня
-                for category in categories:
-                    new_filters = current_filters.copy()
-                    new_filters[column] = category
-                    
-                    # Если следующий уровень последний, добавляем все комбинации
-                    if level + 1 == len(hierarchy_columns) - 1:
-                        next_column = hierarchy_columns[level + 1]
-                        next_categories = analyze_column(source, valid_sheets, next_column, new_filters)
-                        for next_category in next_categories:
-                            final_filters = new_filters.copy()
-                            final_filters[next_column] = next_category
-                            all_combinations.append(final_filters)
-                    else:
-                        # Иначе продолжаем рекурсию
-                        generate_combinations(level + 1, new_filters)
-                return
-            elif all_comb == 'n':
-                break
-            else:
-                print("Please enter 'y' or 'n'")
+        # Выводим информацию о текущем уровне
+        print(f"\n--- Level {level + 1}/{len(hierarchy_columns)} ---")
+        print(f"Column for filtering: '{column}'")
         
         # Выводим доступные категории с номерами
         print(f"\nAvailable categories for column '{column}':")
         for i, cat in enumerate(categories, 1):
             print(f"  {i}. {cat}")
-        print("  b. Назад")
-        print("  c. Отмена")
+        
+        print("  a. All (for this level and all subsequent levels)")
+        print("  s. Select specific categories (for this level only)")
+        print("  b. Back")
+        print("  c. Cancel")
         
         # Запрашиваем выбор
         while True:
-            selection = input(f"Enter categories for '{column}' (comma-separated numbers, 'all', 'b' for back, 'c' for cancel): ").strip()
+            selection = input(f"Enter selection for '{column}' (a/s/b/c): ").strip().lower()
             
             # Обработка специальных команд
-            if selection.lower() in ["c", "cancel", "отмена"]:
+            if selection in ["c", "cancel"]:
                 print("Operation cancelled by user")
                 return
-            if selection.lower() in ["b", "back", "назад"]:
+            if selection in ["b", "back"]:
+                return
+            if selection in ["a", "all"]:
+                # Обрабатываем выбор "all" для всех оставшихся уровней
+                logger.info(f"User chose 'all' for column '{column}' at level {level} and all subsequent levels")
+                
+                # Если это последний уровень, просто добавляем все категории
+                if level == len(hierarchy_columns) - 1:
+                    for category in categories:
+                        new_filters = current_filters.copy()
+                        new_filters[column] = category
+                        all_combinations.append(new_filters)
+                else:
+                    # Для промежуточных уровней генерируем все возможные комбинации
+                    all_combinations_recursive = get_all_combinations(
+                        source, valid_sheets, hierarchy_columns, current_filters, level
+                    )
+                    for combo in all_combinations_recursive:
+                        all_combinations.append(combo)
                 return
             
-            # Обработка "all" - выбираем все категории
-            if selection.lower() == "all":
-                selected_categories = categories
-                break
+            if selection in ["s", "select"]:
+                print("\nYou can select specific categories by numbers or enter 'all' for this level only.")
+                print("Enter categories (comma-separated numbers or 'all' for this level):")
+                
+                while True:
+                    category_selection = input(f"Enter categories for '{column}': ").strip().lower()
+                    
+                    if category_selection in ["c", "cancel"]:
+                        print("Operation cancelled by user")
+                        return
+                    if category_selection in ["b", "back"]:
+                        return
+                    
+                    # Обработка "all" только для текущего уровня
+                    if category_selection == "all":
+                        logger.info(f"User chose 'all' for column '{column}' at level {level} (this level only)")
+                        for category in categories:
+                            new_filters = current_filters.copy()
+                            new_filters[column] = category
+                            generate_combinations(level + 1, new_filters)
+                        return
+                    
+                    # Обработка номеров
+                    user_categories = []
+                    invalid_inputs = []
+                    for item in category_selection.split(","):
+                        item = item.strip()
+                        if item.isdigit():
+                            idx = int(item) - 1
+                            if 0 <= idx < len(categories):
+                                user_categories.append(categories[idx])
+                            else:
+                                invalid_inputs.append(item)
+                        else:
+                            user_categories.append(item)
+                    
+                    # Проверка валидности
+                    invalid_categories = [cat for cat in user_categories if cat not in categories]
+                    if invalid_categories or invalid_inputs:
+                        invalid_list = invalid_categories + invalid_inputs
+                        print(f"Error: Invalid categories: {', '.join(invalid_list)}")
+                        continue
+                    
+                    # Обработка выбора
+                    for category in user_categories:
+                        new_filters = current_filters.copy()
+                        new_filters[column] = category
+                        generate_combinations(level + 1, new_filters)
+                    return
             
-            # Обработка номеров
-            user_categories = []
-            invalid_inputs = []
-            for item in selection.split(","):
-                item = item.strip()
-                if item.isdigit():
-                    idx = int(item) - 1
-                    if 0 <= idx < len(categories):
-                        user_categories.append(categories[idx])
-                    else:
-                        invalid_inputs.append(item)
-                else:
-                    user_categories.append(item)
-            
-            # Проверка валидности
-            invalid_categories = [cat for cat in user_categories if cat not in categories]
-            if invalid_categories or invalid_inputs:
-                invalid_list = invalid_categories + invalid_inputs
-                print(f"Error: Invalid categories: {', '.join(invalid_list)}")
-                continue
-            selected_categories = user_categories
-            break
-        
-        # Обрабатываем выбор
-        for category in selected_categories:
-            new_filters = current_filters.copy()
-            new_filters[column] = category
-            generate_combinations(level + 1, new_filters)
+            print("Please enter 'a' for all, 's' for select, 'b' for back, or 'c' for cancel")
     
     # Начинаем генерацию комбинаций с первого уровня
     generate_combinations(0, {})
     
-    # Добавляем частичные уровни фильтрации
-    final_combinations = []
-    for filters in all_combinations:
-        # Добавляем фильтры всех подуровней
-        for i in range(len(hierarchy_columns)):
-            partial_filter = {}
-            for j in range(i + 1):
-                if hierarchy_columns[j] in filters:
-                    partial_filter[hierarchy_columns[j]] = filters[hierarchy_columns[j]]
-            final_combinations.append(partial_filter)
-    
-    # Удаляем дубликаты частичных фильтров
+    # Возвращаем уникальные комбинации
     unique_combinations = []
     seen = set()
-    for filters in final_combinations:
+    for filters in all_combinations:
         filter_tuple = tuple(sorted(filters.items()))
         if filter_tuple not in seen:
             seen.add(filter_tuple)

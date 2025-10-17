@@ -1,11 +1,10 @@
 import os
 import logging
-# Импортируем уже настроенный логгер из logging_config
-from logging_config import logger
 from excel_utils.analysis import get_all_sheets_headers, analyze_column
-from excel_utils.filtering import get_all_combinations, select_categories_sequentially
+from excel_utils.filtering import select_categories_sequentially
 from excel_utils.formatting import sanitize_filename, generate_short_filename
 from excel_utils.workbook import create_filtered_file
+logger = logging.getLogger('excel_splitter')
 
 def process_file():
     """Обрабатывает один файл: выбор файла, директории, колонок, категорий, создание файлов."""
@@ -98,20 +97,58 @@ def process_file():
             print("No combinations selected")
             return False
         
-        # Создание файлов
-        os.makedirs(destination, exist_ok=True)
+        # Шаг 4: Опция выбора: создать иерархию папок или сохранить все файлы в одну папку
+        create_hierarchy = input("\nDo you want to create folder hierarchy based on filter levels? (y/n): ").strip().lower() == 'y'
+        
+        # Шаг 5: Формирование путей к файлам
         base_name = os.path.splitext(os.path.basename(source))[0]
-        created_files = []
+        file_list = []
+        
+        # Формируем пути для всех комбинаций
         for filters in all_combinations:
-            # Формируем имя файла с расширением .xlsx
-            short_filename = generate_short_filename(
-                os.path.join(destination, base_name),
-                filters
-            )
-            target_file = os.path.join(destination, short_filename)
-            
+            if create_hierarchy:
+                # Создаем путь с иерархией папок
+                current_path = destination
+                for col, value in filters.items():
+                    # Используем полное имя категории для папки
+                    folder_name = sanitize_filename(value)
+                    current_path = os.path.join(current_path, folder_name)
+                # Генерируем имя файла без включения пути
+                short_filename = generate_short_filename(
+                    os.path.join(current_path, base_name),
+                    filters,
+                    is_folder_hierarchy=True
+                )
+                full_path = os.path.join(current_path, short_filename)
+                file_list.append((filters, full_path))
+            else:
+                # Сохраняем все файлы в одну папку
+                short_filename = generate_short_filename(
+                    os.path.join(destination, base_name),
+                    filters,
+                    is_folder_hierarchy=False
+                )
+                full_path = os.path.join(destination, short_filename)
+                file_list.append((filters, full_path))
+        
+        # Шаг 6: Отображаем информацию и запрашиваем подтверждение
+        print(f"\nWill create {len(file_list)} files:")
+        for i, (_, file_path) in enumerate(file_list, 1):
+            print(f"  {i}. {file_path}")
+        
+        if input("\nProceed with processing? (y/n): ").strip().lower() != 'y':
+            print("Processing cancelled by user")
+            return False
+        
+        # Создаем все необходимые папки
+        for _, full_path in file_list:
+            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        
+        # Шаг 7: Создание файлов
+        created_files = []
+        for filters, full_path in file_list:
             # Создаем файл
-            created_file = create_filtered_file(source, target_file, valid_sheets, filters)
+            created_file = create_filtered_file(source, full_path, valid_sheets, filters)
             if created_file is not None:
                 created_files.append(created_file)
         

@@ -1,4 +1,3 @@
 # Импорты для пакета gui
-from .placeholder import launch_gui
-
+from .main import launch_gui
 __all__ = ['launch_gui']
